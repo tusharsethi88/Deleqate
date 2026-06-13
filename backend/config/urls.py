@@ -3,6 +3,8 @@ config.urls — every Flask route from app.py, same paths.
 Page GETs serve JSON data for the React frontend; APIs are identical.
 """
 from django.urls import path, re_path
+from django.conf import settings
+from django.views.static import serve as static_serve
 
 from core import database
 from api.views import (auth, public, orders, pilot, pilot_extra,
@@ -61,6 +63,9 @@ urlpatterns = [
     re_path(r'^uploads/(?P<filename>.+)$', client.uploaded_file),
     re_path(r'^api/preview-img/(?P<filename>.+)$', client.preview_img_file),
     re_path(r'^deliverables/(?P<filename>.+)$', client.deliverable_file),
+    # static assets for server-rendered legacy templates (pilot workflow CSS/JS/img)
+    re_path(r'^static/(?P<path>.+)$', static_serve,
+            {'document_root': str(settings.PROJECT_ROOT / 'static')}),
 
     # ── admin ──
     path('admin', admin.admin_home),

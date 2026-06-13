@@ -5,13 +5,14 @@ api.views.pilot_extra — port of app.py pilot QC/submit/deliverable routes
 import os
 
 from django.conf import settings
+from django.http import HttpResponseRedirect
 from django.views.decorators.http import require_POST
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
 from core.database import get_db, log_status
 from core.auth import role_required
-from core.business import is_allowed_upload
+from core.business import is_allowed_upload, FRONTEND_URL
 from api.helpers import body, ok, err
 
 
@@ -62,26 +63,26 @@ def pilot_submit(request, order_id):
     else:
         o = conn.execute('SELECT * FROM orders WHERE id = ? AND assigned_pilot_id = ?',
                          (order_id, current_user.id)).fetchone()
+    # This is a full-page form POST from the server-rendered workflow page,
+    # so we respond with real HTTP redirects (not JSON).
+    dash = (FRONTEND_URL or '').rstrip('/') + '/pilot/dashboard'
     if o and o['status'] in ('assigned', 'in_progress', 'rejected', 'edit_requested'):
         if request.POST.get('qc_confirmed') != '1':
             conn.close()
-            return err('Cannot submit: you must confirm the QC checklist completion.',
-                       redirect=f'/pilot/job/{order_id}')
+            return HttpResponseRedirect(f'/pilot/job/{order_id}')
         deliverable_count = conn.execute(
             "SELECT COUNT(*) FROM deliverables WHERE order_id=?", (order_id,)).fetchone()[0]
         if deliverable_count == 0:
             conn.close()
-            return err('Cannot submit: no deliverable file uploaded. Upload at least one file before submitting.',
-                       redirect=f'/pilot/job/{order_id}')
+            return HttpResponseRedirect(f'/pilot/job/{order_id}')
         conn.execute("UPDATE orders SET status='submitted', client_action=NULL WHERE id=?", (order_id,))
         log_status(conn, order_id, o['status'], 'submitted', current_user.id,
                    'Pilot submitted (revision)' if o['status'] == 'edit_requested' else 'Pilot submitted')
         conn.commit()
         conn.close()
-        return ok(flash=[('success', f'Task #{order_id} submitted for QC!')],
-                  redirect='/pilot/dashboard')
+        return HttpResponseRedirect(dash)
     conn.close()
-    return ok(redirect='/pilot/dashboard')
+    return HttpResponseRedirect(dash)
 
 
 # ── /api/pilot/upload-deliverable (app.py 3121-3177) ───────

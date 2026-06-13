@@ -5,3 +5,4 @@ python-dotenv>=1.0
 requests>=2.31         # Brevo / MSG91 OTP delivery
 pillow>=10.0           # hero image resize + upload content checks
 gunicorn>=21.2         # production WSGI server
+jinja2>=3.0            # render legacy pilot workflow template server-side

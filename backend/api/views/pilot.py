@@ -8,8 +8,10 @@ from django.conf import settings
 from django.views.decorators.http import require_POST
 from werkzeug.utils import secure_filename
 
+from django.http import HttpResponse, HttpResponseRedirect
 from core.database import get_db, log_status
 from core.auth import role_required
+from core.templating import render_flask_template
 from core.business import (
     TASK_LABELS, is_allowed_upload, _file_ext,
     _clean_label, _unique_named_path, _IMAGE_EXTS,
@@ -172,7 +174,7 @@ def pilot_job(request, order_id):
         'SELECT * FROM deliverables WHERE order_id = ?', (order_id,)).fetchall()]
 
     conn.close()
-    return ok({
+    ctx = {
         'order': order, 'intake': intake,
         'attachments': order['attachments_data'],
         'task_label': task_label,
@@ -184,7 +186,11 @@ def pilot_job(request, order_id):
         'edit_requests': edit_requests,
         'qc_annotation_filename': order.get('qc_annotation_filename'),
         'uploaded_deliverables': uploaded_deliverables,
-    })
+    }
+    # Render the ORIGINAL full pilot workflow template verbatim (server-side),
+    # so the rich step-by-step UI is identical to the pre-migration app.
+    html = render_flask_template('pilot_sku_workflow.html', request, **ctx)
+    return HttpResponse(html)
 
 
 # ── /api/pilot/spatial (app.py 2830-2852) ──────────────────
