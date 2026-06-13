@@ -8,11 +8,10 @@ const heroCss = `
 #heroSection{position:relative;width:100%;aspect-ratio:2752/1536;min-height:400px;overflow:hidden;background:#0c0a08;display:block;}
 #heroText{position:absolute;bottom:0;left:0;right:0;z-index:3;padding:clamp(1.5rem,3vw,2.5rem) clamp(1.5rem,5vw,5rem) clamp(1.75rem,3.5vw,3rem);}
 @media (max-width:767px){
-  #heroSection{aspect-ratio:unset;min-height:unset;display:flex;flex-direction:column;}
-  #heroSliderPanel{width:100% !important;aspect-ratio:2752/1536;position:relative !important;inset:auto !important;overflow:hidden;flex-shrink:0;order:2;}
-  #heroSlider{position:absolute !important;inset:0 !important;}
-  #heroGradient{display:none !important;}
-  #heroText{position:relative !important;order:1;background:linear-gradient(155deg,#16314e 0%,#0e1a28 55%,#0c0a08 100%);padding:2rem 1.5rem 1.75rem !important;}
+  /* Match desktop: image fills the hero, text overlays the bottom over a gradient */
+  #heroSection{aspect-ratio:unset;min-height:90vh;}
+  #heroText{padding:2.25rem 1.5rem 2.5rem !important;}
+  #heroGradient{display:block !important;background:linear-gradient(to top, rgba(5,3,1,0.94) 0%, rgba(5,3,1,0.82) 20%, rgba(5,3,1,0.5) 40%, rgba(5,3,1,0.12) 62%, transparent 78%) !important;}
 }
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.35);}}
 #heroSlider{cursor:grab !important;}
