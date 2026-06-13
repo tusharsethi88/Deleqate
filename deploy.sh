@@ -124,10 +124,9 @@ fi
 
 # ── Step 0b: Check and prepare configuration files ──────────────────────────
 log "--- Checking configuration files ---"
-if [ ! -f "$APP_DIR/backend/.env" ]; then
-  log "✗ Missing backend/.env. Generating a template..."
-  mkdir -p "$APP_DIR/backend"
-  cat <<EOT > "$APP_DIR/backend/.env"
+if [ ! -f "$APP_DIR/.env" ]; then
+  log "✗ Missing .env (repo root — this is where Django reads it). Generating a template..."
+  cat <<EOT > "$APP_DIR/.env"
 DJANGO_ENV=production
 DELEQATE_SECRET_KEY=$(head -c 32 /dev/urandom | base64 | tr -d '+/')
 DELEQATE_ADMIN_PASSWORD=change-me-promptly
@@ -142,7 +141,7 @@ PAYU_URL=https://secure.payu.in/_payment
 SUPPORT_WHATSAPP=917011989292
 SUPPORT_UPI=deleqate@upi
 EOT
-  log "  → Created /home/ubuntu/deleqate/backend/.env template."
+  log "  → Created /home/ubuntu/deleqate/.env template."
   log "  → Please edit this file with your production keys/domains, then re-run deploy.sh."
   exit 1
 fi
@@ -150,7 +149,7 @@ fi
 if [ ! -f "$APP_DIR/frontend/.env.production" ]; then
   log "✗ Missing frontend/.env.production. Generating template..."
   mkdir -p "$APP_DIR/frontend"
-  echo "VITE_API_BASE=" > "$APP_DIR/frontend/.env.production"
+  echo "VITE_API_BASE=https://api.deleqate.com" > "$APP_DIR/frontend/.env.production"
   log "  → Created /home/ubuntu/deleqate/frontend/.env.production template."
 fi
 
