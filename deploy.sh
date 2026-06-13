@@ -255,7 +255,7 @@ log "--- Step 8: Syncing nginx config and reloading ---"
 
 # Choose the right nginx config based on whether SSL certs exist
 CERT_PATH="/etc/letsencrypt/live/deleqate.com/fullchain.pem"
-if [ -f "$CERT_PATH" ]; then
+if sudo test -f "$CERT_PATH"; then
     log "✓ SSL certs found — using HTTPS config"
     sudo cp "$APP_DIR/deploy/nginx-deleqate-ssl.conf" /etc/nginx/conf.d/deleqate.conf
 else
