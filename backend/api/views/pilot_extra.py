@@ -64,8 +64,9 @@ def pilot_submit(request, order_id):
         o = conn.execute('SELECT * FROM orders WHERE id = ? AND assigned_pilot_id = ?',
                          (order_id, current_user.id)).fetchone()
     # This is a full-page form POST from the server-rendered workflow page,
-    # so we respond with real HTTP redirects (not JSON).
-    dash = (FRONTEND_URL or '').rstrip('/') + '/pilot/dashboard'
+    # so we respond with real HTTP redirects (not JSON). Relative path keeps the
+    # pilot on the API host where the dashboard is also server-rendered.
+    dash = '/pilot/dashboard'
     if o and o['status'] in ('assigned', 'in_progress', 'rejected', 'edit_requested'):
         if request.POST.get('qc_confirmed') != '1':
             conn.close()

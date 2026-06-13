@@ -78,9 +78,14 @@ def pilot_dashboard_v2(request):
     active_jobs = _enrich(active_rows) + _enrich(submitted_rows)
     completed_jobs = _enrich(done_rows)
     rejected_jobs = _enrich(rejected_rows)
-    return ok({'active_jobs': active_jobs, 'completed_jobs': completed_jobs,
-               'rejected_jobs': rejected_jobs,
-               'active_count': len(active_jobs), 'done_count': len(completed_jobs)})
+    # Render the ORIGINAL pilot dashboard template verbatim (server-side).
+    html = render_flask_template(
+        'pilot_dashboard.html', request,
+        active_jobs=active_jobs, completed_jobs=completed_jobs,
+        rejected_jobs=rejected_jobs,
+        active_count=len(active_jobs), done_count=len(completed_jobs),
+        task_labels=TASK_LABELS)
+    return HttpResponse(html)
 
 
 # ── /pilot/dashboard-legacy (app.py 2684-2709) ─────────────

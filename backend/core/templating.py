@@ -25,6 +25,10 @@ def _url_for(endpoint, **kw):
         return (FRONTEND_URL or '').rstrip('/') + '/logout'
     if endpoint == 'static':
         return '/static/' + kw.get('filename', '')
+    if endpoint == 'pilot_execute':
+        return f"/pilot/execute/{kw.get('order_id', '')}"
+    if endpoint == 'pilot_job':
+        return f"/pilot/job/{kw.get('order_id', '')}"
     return '/'
 
 
