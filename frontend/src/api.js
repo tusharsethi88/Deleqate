@@ -1,7 +1,7 @@
 // api.js — single fetch wrapper for the Django backend.
 // Session-cookie auth + CSRF token on every state-changing request,
 // mirroring how the Flask templates submitted forms.
-export const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5051';
+export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:5051';
 
 let csrfToken = null;
 
