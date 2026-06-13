@@ -54,8 +54,8 @@ if [ ! -d "$APP_DIR" ]; then
   fi
   
   # URL encode username and token using Python to safely handle special characters
-  encoded_user=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$github_username'''))")
-  encoded_token=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$github_token'''))")
+  encoded_user=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$github_username")
+  encoded_token=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$github_token")
   
   AUTH_REPO_URL="https://${encoded_user}:${encoded_token}@github.com/tusharsethi88/Deleqate.git"
   
@@ -91,6 +91,7 @@ fi
 log "--- Checking configuration files ---"
 if [ ! -f "$APP_DIR/backend/.env" ]; then
   log "✗ Missing backend/.env. Generating a template..."
+  mkdir -p "$APP_DIR/backend"
   cat <<EOT > "$APP_DIR/backend/.env"
 DJANGO_ENV=production
 DELEQATE_SECRET_KEY=$(head -c 32 /dev/urandom | base64 | tr -d '+/')
@@ -113,6 +114,7 @@ fi
 
 if [ ! -f "$APP_DIR/frontend/.env.production" ]; then
   log "✗ Missing frontend/.env.production. Generating template..."
+  mkdir -p "$APP_DIR/frontend"
   echo "VITE_API_BASE=https://api.deleqate.com" > "$APP_DIR/frontend/.env.production"
   log "  → Created /home/ubuntu/deleqate/frontend/.env.production template."
 fi
