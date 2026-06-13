@@ -6,7 +6,7 @@
 # ──────────────────────────────────────────────────────────────
 set -euo pipefail
 
-APP_DIR="/home/opc/deleqate"      # repo root on the server
+APP_DIR="/home/ubuntu/deleqate"   # repo root on the server
 BRANCH="main"                     # GitHub branch to deploy
 BACKEND_SERVICE="deleqate"        # systemd unit running gunicorn (Django)
 

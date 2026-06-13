@@ -3,12 +3,12 @@ Description=Deleqate Django backend (gunicorn)
 After=network.target
 
 [Service]
-User=opc
-Group=opc
-WorkingDirectory=/home/opc/deleqate/backend
-Environment="PATH=/home/opc/deleqate/backend/venv/bin"
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/deleqate/backend
+Environment="PATH=/home/ubuntu/deleqate/backend/venv/bin"
 # gunicorn serves the Django WSGI app on a local port; nginx proxies to it.
-ExecStart=/home/opc/deleqate/backend/venv/bin/gunicorn config.wsgi:application \
+ExecStart=/home/ubuntu/deleqate/backend/venv/bin/gunicorn config.wsgi:application \
     --bind 127.0.0.1:5051 \
     --workers 3 \
     --timeout 120
