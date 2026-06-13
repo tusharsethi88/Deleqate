@@ -150,7 +150,7 @@ fi
 if [ ! -f "$APP_DIR/frontend/.env.production" ]; then
   log "✗ Missing frontend/.env.production. Generating template..."
   mkdir -p "$APP_DIR/frontend"
-  echo "VITE_API_BASE=https://api.deleqate.com" > "$APP_DIR/frontend/.env.production"
+  echo "VITE_API_BASE=" > "$APP_DIR/frontend/.env.production"
   log "  → Created /home/ubuntu/deleqate/frontend/.env.production template."
 fi
 
