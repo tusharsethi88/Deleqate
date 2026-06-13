@@ -7,10 +7,20 @@
 set -euo pipefail
 
 APP_DIR="/home/ubuntu/deleqate"   # repo root on the server
+REPO_URL="https://github.com/tusharsethi88/Deleqate.git" # GitHub repository URL
 BRANCH="main"                     # GitHub branch to deploy
 BACKEND_SERVICE="deleqate"        # systemd unit running gunicorn (Django)
 
+# 0. Clone repository if it does not exist
+if [ ! -d "$APP_DIR" ]; then
+  echo "▶ Directory $APP_DIR does not exist. Cloning repository..."
+  sudo mkdir -p "$APP_DIR"
+  sudo chown -R ubuntu:ubuntu "$APP_DIR"
+  git clone "$REPO_URL" "$APP_DIR"
+fi
+
 cd "$APP_DIR"
+
 
 echo ""
 echo "=========================================="
