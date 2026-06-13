@@ -9,7 +9,7 @@ const heroCss = `
 #heroText{position:absolute;bottom:0;left:0;right:0;z-index:3;padding:clamp(1.5rem,3vw,2.5rem) clamp(1.5rem,5vw,5rem) clamp(1.75rem,3.5vw,3rem);}
 @media (max-width:767px){
   #heroSection{aspect-ratio:unset;min-height:unset;display:flex;flex-direction:column;}
-  #heroSliderPanel{width:100%;aspect-ratio:2752/1536;position:relative;overflow:hidden;flex-shrink:0;order:2;}
+  #heroSliderPanel{width:100% !important;aspect-ratio:2752/1536;position:relative !important;inset:auto !important;overflow:hidden;flex-shrink:0;order:2;}
   #heroSlider{position:absolute !important;inset:0 !important;}
   #heroGradient{display:none !important;}
   #heroText{position:relative !important;order:1;background:#0c0a08;padding:2rem 1.5rem 1.75rem !important;}
