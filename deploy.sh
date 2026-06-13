@@ -253,14 +253,25 @@ fi
 # ── Step 8: Sync nginx config + reload (no downtime) ────────────────────────
 log "--- Step 8: Syncing nginx config and reloading ---"
 
-# Always install/update the nginx config from the repo
-sudo cp "$APP_DIR/deploy/nginx-deleqate.conf" /etc/nginx/conf.d/deleqate.conf
-
-# Disable the default site so it doesn't conflict
-if [ -f /etc/nginx/sites-enabled/default ]; then
-    log "Disabling default Nginx site configuration..."
-    sudo rm -f /etc/nginx/sites-enabled/default
+# Choose the right nginx config based on whether SSL certs exist
+CERT_PATH="/etc/letsencrypt/live/deleqate.com/fullchain.pem"
+if [ -f "$CERT_PATH" ]; then
+    log "✓ SSL certs found — using HTTPS config"
+    sudo cp "$APP_DIR/deploy/nginx-deleqate-ssl.conf" /etc/nginx/conf.d/deleqate.conf
+else
+    log "⚠ SSL certs not found — using HTTP-only config"
+    sudo cp "$APP_DIR/deploy/nginx-deleqate.conf" /etc/nginx/conf.d/deleqate.conf
+    log "  To enable HTTPS later, run:"
+    log "  sudo certbot --nginx -d deleqate.com -d www.deleqate.com -d api.deleqate.com"
 fi
+
+# Disable the default site and any old sites-enabled config so they don't conflict
+for old_site in /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/deleqate; do
+    if [ -e "$old_site" ]; then
+        log "Removing conflicting nginx config: $old_site"
+        sudo rm -f "$old_site"
+    fi
+done
 
 if sudo nginx -t 2>/dev/null; then
     sudo systemctl reload nginx
@@ -268,16 +279,8 @@ if sudo nginx -t 2>/dev/null; then
 else
     log "✗ ERROR: nginx config test failed. Showing errors:"
     sudo nginx -t
-    log "  Fix deploy/nginx-deleqate.conf and redeploy, or check: sudo nginx -t"
+    log "  Fix the nginx config and redeploy, or check: sudo nginx -t"
     exit 1
-fi
-
-# Remind about SSL if certs are not yet provisioned
-CERT_PATH="/etc/letsencrypt/live/deleqate.com/fullchain.pem"
-if [ ! -f "$CERT_PATH" ]; then
-    log "⚠ SSL certs not found — site is running on HTTP only."
-    log "  To enable HTTPS, run:"
-    log "  sudo certbot --nginx -d deleqate.com -d www.deleqate.com -d api.deleqate.com"
 fi
 
 # ── Done ────────────────────────────────────────────────================─────
