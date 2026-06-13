@@ -12,7 +12,7 @@ const heroCss = `
   #heroSliderPanel{width:100% !important;aspect-ratio:2752/1536;position:relative !important;inset:auto !important;overflow:hidden;flex-shrink:0;order:2;}
   #heroSlider{position:absolute !important;inset:0 !important;}
   #heroGradient{display:none !important;}
-  #heroText{position:relative !important;order:1;background:#0c0a08;padding:2rem 1.5rem 1.75rem !important;}
+  #heroText{position:relative !important;order:1;background:linear-gradient(155deg,#16314e 0%,#0e1a28 55%,#0c0a08 100%);padding:2rem 1.5rem 1.75rem !important;}
 }
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.55;transform:scale(1.35);}}
 #heroSlider{cursor:grab !important;}
