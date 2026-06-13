@@ -41,6 +41,41 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
+# ── Prerequisites: Install system dependencies if missing ───────────────────
+install_prerequisites() {
+  local need_update=false
+
+  if ! command -v node &>/dev/null || ! command -v npm &>/dev/null; then
+    log "--- Installing Node.js 20.x and npm ---"
+    need_update=true
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+    log "✓ Node $(node --version) / npm $(npm --version) installed"
+  fi
+
+  if ! command -v python3 &>/dev/null; then
+    log "--- Installing Python3 ---"
+    need_update=true
+    sudo apt-get update -qq
+    sudo apt-get install -y python3 python3-venv python3-pip
+    log "✓ Python3 installed"
+  elif ! python3 -m venv --help &>/dev/null 2>&1; then
+    log "--- Installing python3-venv ---"
+    if [ "$need_update" = false ]; then sudo apt-get update -qq; fi
+    sudo apt-get install -y python3-venv
+    log "✓ python3-venv installed"
+  fi
+
+  if ! command -v git &>/dev/null; then
+    log "--- Installing git ---"
+    if [ "$need_update" = false ]; then sudo apt-get update -qq; fi
+    sudo apt-get install -y git
+    log "✓ git installed"
+  fi
+}
+
+install_prerequisites
+
 # ── Step 0: Clone repository if it does not exist ───────────────────────────
 if [ ! -d "$APP_DIR" ]; then
   echo "▶ Directory $APP_DIR does not exist."
