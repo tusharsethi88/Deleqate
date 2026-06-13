@@ -1,0 +1,26 @@
+FLOW X-RAY SUMMARY
+==================================================
+timestamp: 20260612_193801
+page url : https://labs.google/fx/tools/flow/project/53bb03b1-ae5a-45f8-96a4-f39b4aa5e73b
+frames   : 4 (incl. main)
+deep DOM interactive elements (open shadow incl.): 31
+max OPEN shadow depth reached: 0
+custom elements on page: 1
+
+WHERE EACH KEY BUTTON WAS FOUND
+--------------------------------------------------
+  Add to Prompt   : DOM/shadow x3 (main-frame)
+  Upload media    : DOM/shadow x6 (main-frame)
+  Search assets   : DOM/shadow x3 (main-frame)
+  Add Media       : DOM/shadow x11 (main-frame)
+  Create          : DOM/shadow x31 (main-frame)
+  Nano Banana     : DOM/shadow x3 (main-frame)
+  16:9            : DOM/shadow x3 (main-frame)
+
+INTERPRETATION
+--------------------------------------------------
+Add to Prompt IS in the DOM/open-shadow walk -> the old
+querySelectorAll missed it because it didn't descend shadow
+roots. FIX: deep-shadow click (this script's walk) -> mouse click xy.
+
+Send me: SUMMARY.txt + targets_found.json + page.png (+ ax_tree.json)

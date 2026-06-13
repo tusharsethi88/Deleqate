@@ -1,0 +1,9 @@
+flask>=3.0
+flask-login>=0.6
+werkzeug>=3.0
+python-dotenv>=1.0
+requests>=2.31
+itsdangerous>=2.1
+gunicorn>=21.2        # production WSGI server (not flask dev server)
+# razorpay removed — using PayU instead (no extra library needed)
+# NOTE: security.py uses stdlib only — no extra installs needed

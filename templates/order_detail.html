@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order #{{ order.id }} — Deleqate Admin</title>
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+body { background:#F4F7FB; }
+.od-topbar { background:#1A3A5C; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.od-topbar-left { display:flex; align-items:center; gap:14px; }
+.od-logo { font-weight:800; font-size:1.1rem; color:#fff; text-decoration:none; }
+.od-logo span { color:#C9A84C; }
+.od-badge { font-size:0.65rem; font-weight:800; background:#C9A84C; color:#1A3A5C; padding:3px 8px; border-radius:4px; }
+.od-back { color:rgba(255,255,255,0.65); font-size:0.8rem; text-decoration:none; }
+.od-back:hover { color:#fff; }
+.od-wrap { max-width:1300px; margin:0 auto; padding:24px 20px; }
+.od-grid { display:grid; grid-template-columns:340px 1fr; gap:20px; align-items:start; }
+@media(max-width:900px){
+  .od-grid{ grid-template-columns:1fr; }
+  .od-wrap{ padding:16px 12px; }
+  .od-topbar{ padding:12px 16px; }
+}
+@media(max-width:480px){
+  .od-wrap{ padding:12px 8px; }
+  .od-topbar-left{ gap:8px; }
+  .od-badge{ display:none; }
+  body{ font-size:15px; }
+}
+.od-card { background:#fff; border:1px solid #DDE3EC; border-radius:14px; padding:20px; }
+.od-card-title { font-size:0.78rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; color:#1A3A5C; margin-bottom:14px; }
+.od-row { display:flex; font-size:0.82rem; padding:5px 0; border-bottom:1px solid #F0F3F8; }
+.od-row:last-child { border-bottom:none; }
+.od-row-lbl { color:#8B9AAB; width:130px; flex-shrink:0; }
+.od-row-val { font-weight:600; color:#1A3A5C; }
+.pill { display:inline-block; font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:capitalize; }
+.pill-pending { background:#FEF3C7; color:#92400E; }
+.pill-assigned { background:#DBEAFE; color:#1D4ED8; }
+.pill-in_progress { background:#E0E7FF; color:#3730A3; }
+.pill-under_review { background:#FEF9C3; color:#854D0E; }
+.pill-delivered { background:#D1FAE5; color:#065F46; }
+.pill-approved { background:#BBF7D0; color:#14532D; }
+.pill-rejected { background:#FEE2E2; color:#991B1B; }
+/* QC bar */
+.qc-bar { background:#fff; border:1px solid #DDE3EC; border-radius:14px; padding:18px 20px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.qc-bar-info strong { font-size:1rem; color:#1A3A5C; }
+.qc-bar-info span { font-size:0.8rem; color:#8B9AAB; }
+.qc-order-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.qc-note-input { border:1.5px solid #DDE3EC; border-radius:8px; padding:8px 12px; font-size:0.82rem; width:240px; font-family:inherit; }
+.btn-qc-approve { background:#16A34A; color:#fff; border:none; border-radius:9px; padding:10px 22px; font-size:0.85rem; font-weight:700; cursor:pointer; }
+.btn-qc-approve:hover { background:#15803D; }
+.btn-qc-reject { background:#fff; color:#DC2626; border:1.5px solid #DC2626; border-radius:9px; padding:10px 22px; font-size:0.85rem; font-weight:700; cursor:pointer; }
+.btn-qc-reject:hover { background:#FEF2F2; }
+/* QC header / filter */
+.qc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+.qc-title { font-size:1rem; font-weight:800; color:#1A3A5C; }
+.qc-filter { display:flex; gap:6px; }
+.qc-filter-btn { font-size:0.72rem; font-weight:700; border:1.5px solid #DDE3EC; background:#fff; color:#8B9AAB; padding:4px 12px; border-radius:20px; cursor:pointer; transition:all 0.15s; }
+.qc-filter-btn.active, .qc-filter-btn:hover { border-color:#1A3A5C; color:#1A3A5C; background:#EEF3FA; }
+/* Room cards */
+.room-card { background:#fff; border:1px solid #DDE3EC; border-radius:14px; overflow:hidden; margin-bottom:16px; }
+.room-card.approved-card { border-left:4px solid #16A34A; }
+.room-card.rejected-card { border-left:4px solid #DC2626; }
+.room-card.pending-card  { border-left:4px solid #C9A84C; }
+.room-card-header { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; background:#F8FAFC; border-bottom:1px solid #EEF2F8; cursor:pointer; }
+.room-card-title { font-size:0.9rem; font-weight:800; color:#1A3A5C; display:flex; align-items:center; gap:8px; }
+.room-toggle { font-size:1.1rem; color:#8B9AAB; transition:transform 0.2s; display:inline-block; }
+.room-toggle.open { transform:rotate(90deg); }
+.room-card-body { padding:16px 18px; display:none; }
+.room-card-body.open { display:block; }
+/* Compare grid (fallback for non-image types) */
+.compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.compare-label { font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:8px; }
+.compare-label.client-lbl { color:#1D4ED8; }
+.compare-label.pilot-lbl  { color:#065F46; }
+.compare-img { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:10px; border:1px solid #DDE3EC; background:#F4F7FB; display:block; cursor:zoom-in; transition:transform 0.15s; }
+.compare-img:hover { transform:scale(1.01); }
+.compare-empty { width:100%; aspect-ratio:4/3; border-radius:10px; border:2px dashed #DDE3EC; background:#F8FAFC; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; color:#C2D4E8; font-size:0.75rem; font-weight:600; }
+.compare-filename { font-size:0.72rem; color:#8B9AAB; margin-top:6px; word-break:break-all; }
+.compare-viewbtn { display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:700; color:#1A3A5C; text-decoration:none; margin-top:6px; border:1px solid #DDE3EC; border-radius:6px; padding:3px 10px; }
+.compare-viewbtn:hover { background:#EEF3FA; }
+/* Comparison slider */
+.cmp-labels { display:flex; justify-content:space-between; margin-bottom:6px; }
+.cmp-lbl-l { font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:#1D4ED8; }
+.cmp-lbl-r { font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:#065F46; }
+.cmp-slider-body { position:relative; overflow:hidden; border-radius:10px; border:1px solid #DDE3EC; line-height:0; background:#F4F7FB; cursor:col-resize; }
+.cmp-after-img { width:100%; display:block; max-height:460px; object-fit:cover; pointer-events:none; user-select:none; }
+.cmp-before-img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; pointer-events:none; user-select:none; }
+.cmp-handle { position:absolute; top:0; left:50%; transform:translateX(-50%); height:100%; z-index:10; pointer-events:none; display:flex; flex-direction:column; align-items:center; }
+.cmp-handle-line { flex:1; width:2px; background:rgba(255,255,255,0.95); box-shadow:0 0 8px rgba(0,0,0,0.45); }
+.cmp-handle-btn { position:absolute; top:50%; transform:translateY(-50%); width:38px; height:38px; background:#fff; border-radius:50%; box-shadow:0 2px 12px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; font-size:15px; color:#1A3A5C; font-weight:900; border:1.5px solid #DDE3EC; }
+.cmp-filenames { display:flex; justify-content:space-between; font-size:0.68rem; color:#8B9AAB; margin-top:5px; }
+.cmp-viewbtns { display:flex; gap:8px; margin-top:6px; margin-bottom:14px; }
+/* Per-image actions */
+.img-actions { border-top:1px solid #EEF2F8; padding-top:14px; }
+.img-status-badge { font-size:0.72rem; font-weight:800; padding:4px 12px; border-radius:20px; }
+.img-status-pending  { background:#FEF3C7; color:#92400E; }
+.img-status-approved { background:#D1FAE5; color:#065F46; }
+.img-status-rejected { background:#FEE2E2; color:#991B1B; }
+.remark-input { width:100%; border:1.5px solid #DDE3EC; border-radius:8px; padding:8px 12px; font-size:0.82rem; font-family:inherit; resize:none; color:#1A3A5C; box-sizing:border-box; }
+.remark-input:focus { border-color:#1A3A5C; outline:none; }
+.action-btns { display:flex; gap:8px; margin-top:8px; }
+.btn-approve-img { background:#16A34A; color:#fff; border:none; border-radius:8px; padding:8px 20px; font-size:0.82rem; font-weight:700; cursor:pointer; }
+.btn-approve-img:hover:not(.btn-disabled) { background:#15803D; }
+.btn-reject-img { background:#fff; color:#DC2626; border:1.5px solid #DC2626; border-radius:8px; padding:8px 20px; font-size:0.82rem; font-weight:700; cursor:pointer; }
+.btn-reject-img:hover:not(.btn-disabled) { background:#FEF2F2; }
+.btn-disabled { opacity:0.4; cursor:not-allowed !important; pointer-events:none; }
+.file-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid #F0F3F8; }
+.file-row:last-child { border-bottom:none; }
+.file-row-name { font-size:0.82rem; font-weight:600; }
+.file-row-meta { font-size:0.72rem; color:#8B9AAB; margin-top:2px; }
+/* Lightbox */
+#lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:9999; align-items:center; justify-content:center; cursor:zoom-out; }
+#lightbox.open { display:flex; }
+#lightbox img { max-width:90vw; max-height:88vh; object-fit:contain; border-radius:12px; box-shadow:0 8px 40px rgba(0,0,0,0.6); cursor:default; }
+#lb-close { position:absolute; top:18px; right:24px; color:#fff; font-size:2.2rem; font-weight:800; cursor:pointer; opacity:0.7; line-height:1; }
+#lb-close:hover { opacity:1; }
+#lb-label { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.55); color:#fff; font-size:0.82rem; padding:6px 18px; border-radius:20px; white-space:nowrap; }
+#toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:10px; font-size:0.875rem; font-weight:600; z-index:9998; display:none; box-shadow:0 4px 24px rgba(0,0,0,0.15); }
+@media(max-width:900px) { .od-grid { grid-template-columns:1fr; } .compare-grid { grid-template-columns:1fr; } }
+/* Fullscreen comparison modal — admin */
+#adm-fs-modal { display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000;z-index:99999;flex-direction:column; }
+#adm-fs-modal.open { display:flex; }
+#adm-fs-bar { background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:space-between;padding:10px 18px;flex-shrink:0; }
+#adm-fs-label { color:#fff;font-size:13px;font-weight:700; }
+#adm-fs-hints { color:#94a3b8;font-size:11px; }
+#adm-fs-close { background:#e11d48;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:700;cursor:pointer; }
+#adm-fs-inner { position:relative;flex:1;overflow:hidden;cursor:col-resize;line-height:0; }
+#adm-fs-after { width:100%;height:100%;object-fit:contain;display:block;pointer-events:none; }
+#adm-fs-before { position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;pointer-events:none;clip-path:inset(0 50% 0 0); }
+#adm-fs-handle { position:absolute;top:0;left:50%;transform:translateX(-50%);height:100%;z-index:20;pointer-events:none;display:flex;flex-direction:column;align-items:center; }
+#adm-fs-handle-line { flex:1;width:2px;background:rgba(255,255,255,0.9);box-shadow:0 0 8px rgba(0,0,0,0.6); }
+#adm-fs-handle-btn { position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;background:#fff;border-radius:50%;box-shadow:0 3px 12px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;font-size:18px;color:#1a3a5c;font-weight:900; }
+.cmp-fs-btn { font-size:11px;font-weight:700;background:#1a3a5c;color:#fff;border:none;border-radius:5px;padding:3px 9px;cursor:pointer;opacity:0.85;margin-left:auto;display:block;margin-bottom:5px; }
+.cmp-fs-btn:hover { opacity:1; }
+</style>
+</head>
+<body>
+
+<div class="od-topbar">
+  <div class="od-topbar-left">
+    <a href="/" class="od-logo">Dele<span>qate</span></a>
+    <span class="od-badge">ADMIN</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <a href="{{ url_for('admin_home') }}" class="od-back">← Admin Queue</a>
+    <a href="{{ url_for('logout') }}" style="font-size:0.82rem;color:#8B9AAB;text-decoration:none;">Logout</a>
+  </div>
+</div>
+
+<div class="od-wrap">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+    <div>
+      <h1 style="margin:0;font-size:1.6rem;color:#1A3A5C;">Order #{{ order.id }}</h1>
+      <div style="font-size:0.82rem;color:#8B9AAB;margin-top:4px;">
+        {{ (order.task_type or order.task or 'Order').replace('_',' ').title() }} · Submitted {{ order.created_at[:10] if order.created_at else '--' }}
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span class="pill pill-{{ order.status or 'pending' }}" style="font-size:0.82rem;padding:5px 14px;">{{ (order.status or 'pending').replace('_',' ').title() }}</span>
+      {% if order.assigned_pilot_id %}
+      <a href="{{ url_for('pilot_job', order_id=order.id) }}" style="background:#1A3A5C;color:#fff;border-radius:9px;padding:8px 18px;font-size:0.82rem;font-weight:700;text-decoration:none;">Open Execution</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="od-grid">
+
+    <!-- LEFT -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div class="od-card">
+        <div class="od-card-title">Client Brief</div>
+        <div class="od-row"><span class="od-row-lbl">Name</span><span class="od-row-val">{{ order.name or order.client_name or '--' }}</span></div>
+        <div class="od-row"><span class="od-row-lbl">Phone</span><span class="od-row-val">{{ order.phone or order.client_phone or '--' }}</span></div>
+        <div class="od-row"><span class="od-row-lbl">Email</span><span class="od-row-val">{{ order.email or order.client_email or '--' }}</span></div>
+        <div class="od-row"><span class="od-row-lbl">Task</span><span class="od-row-val">{{ (order.task_type or order.task or '--').replace('_',' ').title() }}</span></div>
+        <div class="od-row"><span class="od-row-lbl">Units</span><span class="od-row-val">{{ order.render_count or 1 }}</span></div>
+        <div class="od-row"><span class="od-row-lbl">Total</span><span class="od-row-val" style="color:#16A34A;font-size:1rem;">Rs.{{ '{:,}'.format((order.total_price or 0)//100) }}</span></div>
+        <div class="od-row"><span class="od-row-lbl">Pilot Payout</span><span class="od-row-val">Rs.{{ '{:,}'.format((order.pilot_payout or 0)//100) }}</span></div>
+        <div class="od-row"><span class="od-row-lbl">Pilot</span><span class="od-row-val">{{ order.pilot_name or '--' }}</span></div>
+        <div class="od-row"><span class="od-row-lbl">Submitted</span><span class="od-row-val local-time" data-utc="{{ order.created_at }}">—</span></div>
+        <div class="od-row"><span class="od-row-lbl">Assigned</span><span class="od-row-val local-time" data-utc="{{ order.assigned_at }}">Pending</span></div>
+        <div class="od-row">
+          <span class="od-row-lbl">SLA Tracker</span>
+          <span class="od-row-val sla-timer" 
+                data-created="{{ order.created_at }}" 
+                data-completed="{{ order.completed_at or order.delivered_at or '' }}" 
+                data-status="{{ order.status }}" 
+                style="font-weight: 700; color: #1A3A5C;">—</span>
+        </div>
+      </div>
+
+      <div class="od-card">
+        <div class="od-card-title">Order Inputs</div>
+        {% if intake %}
+          {% for k, v in intake.items() %}
+          {% if k != 'rooms' %}
+          <div class="od-row">
+            <span class="od-row-lbl">{{ k.replace('_',' ').title() }}</span>
+            <span class="od-row-val" style="font-size:0.8rem;">
+              {% if v is mapping %}{{ v|tojson }}
+              {% elif v is iterable and v is not string %}{{ v|join(', ') }}
+              {% elif v == true %}Yes{% elif v == false %}No
+              {% else %}{{ v or '--' }}{% endif %}
+            </span>
+          </div>
+          {% endif %}
+          {% endfor %}
+          {% if intake.rooms %}
+          <div style="margin-top:10px;font-size:0.72rem;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:#8B9AAB;margin-bottom:6px;">Spaces to Stage</div>
+          {% for room in intake.rooms %}
+          <div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:0.82rem;">
+            <span style="width:22px;height:22px;background:#EEF3FA;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;color:#1A3A5C;flex-shrink:0;">{{ loop.index }}</span>
+            <span style="font-weight:600;color:#1A3A5C;">{{ room.label }}</span>
+            {% if room.geometry %}<span style="color:#8B9AAB;font-size:0.75rem;">· {{ room.geometry }}</span>{% endif %}
+          </div>
+          {% endfor %}
+          {% endif %}
+        {% else %}
+        <div style="color:#8B9AAB;font-size:0.82rem;">No brief data.</div>
+        {% endif %}
+      </div>
+
+      {% set img_exts = ('png','jpg','jpeg','webp','gif','avif','heic','heif') %}
+      {% set other_files = [] %}
+      {% for a in attachments %}
+        {% set _ext = a.filename.rsplit('.',1)[-1].lower() if '.' in a.filename else '' %}
+        {% if _ext not in img_exts %}
+          {% set _ = other_files.append(a) %}
+        {% endif %}
+      {% endfor %}
+      {% if other_files %}
+      <div class="od-card">
+        <div class="od-card-title">Other Client Files</div>
+        {% for a in other_files %}
+        <div class="file-row">
+          <div>
+            <div class="file-row-name">{{ a.original_name }}</div>
+            <div class="file-row-meta">{{ a.attachment_type }}</div>
+          </div>
+          <a href="/uploads/{{ a.filename }}" target="_blank" style="font-size:0.75rem;font-weight:700;color:#1A3A5C;border:1px solid #DDE3EC;border-radius:6px;padding:4px 12px;text-decoration:none;">View</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="od-card" style="font-size:0.78rem;">
+        <div class="od-card-title">QC Notes on File</div>
+        <div style="color:#8B9AAB;">{{ order.qc_notes or 'None yet.' }}</div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div>
+      {% if current_user.role == 'admin' and order.status in ('submitted','under_review','delivered','rejected','approved') %}
+
+      {% if order.status in ('submitted','under_review') %}
+      <div class="qc-bar">
+        <div class="qc-bar-info">
+          <strong>Review each image</strong><br>
+          <span>Approve or reject per image. When all images pass, order auto-delivers to client.</span>
+        </div>
+        <div class="qc-order-actions">
+          <input type="text" id="qc-note-global" class="qc-note-input" placeholder="Global QC note (optional)…">
+          <button class="btn-qc-approve" onclick="orderQC('approve')">✓ QC Pass — Deliver to Client</button>
+          <button class="btn-qc-reject"  onclick="orderQC('reject')">✗ Reject All — Back to Pilot</button>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="qc-header">
+        <div class="qc-title">Image-by-Image QC</div>
+        <div class="qc-filter">
+          <button class="qc-filter-btn active" onclick="filterRooms('all',this)">All</button>
+          <button class="qc-filter-btn" onclick="filterRooms('pending',this)">Pending</button>
+          <button class="qc-filter-btn" onclick="filterRooms('approved',this)">Approved</button>
+          <button class="qc-filter-btn" onclick="filterRooms('rejected',this)">Rejected</button>
+        </div>
+      </div>
+
+      {% set img_atts = [] %}
+      {% for a in attachments %}
+        {% set _ext = a.filename.rsplit('.',1)[-1].lower() if '.' in a.filename else '' %}
+        {% if _ext in img_exts %}
+          {% set _ = img_atts.append(a) %}
+        {% endif %}
+      {% endfor %}
+
+      {# ── Label-based pairing: iterate deliverables, find client photo by file_label ── #}
+      {% if deliverables|length > 0 %}
+        {% for dv in deliverables %}
+          {% set i = loop.index0 %}
+          {# Find client attachment(s) matching this deliverable's label, split by POV #}
+          {% set ns_pair = namespace(pov_a=none, pov_b=none, extras=[]) %}
+          {% if dv.file_label %}
+            {% for a in img_atts %}
+              {% if a.file_label and a.file_label == dv.file_label %}
+                {% set _is_b = a.attachment_type and a.attachment_type.endswith('_b') %}
+                {% if _is_b and not ns_pair.pov_b %}{% set ns_pair.pov_b = a %}
+                {% elif (not _is_b) and not ns_pair.pov_a %}{% set ns_pair.pov_a = a %}
+                {% else %}{% set ns_pair.extras = ns_pair.extras + [a] %}{% endif %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          {# POV-aware: compare against the SAME POV the pilot delivered #}
+          {% set ns_sel = namespace(ca=none, ca_extras=[]) %}
+          {% if dv.pov == 'B' and ns_pair.pov_b %}
+            {% set ns_sel.ca = ns_pair.pov_b %}
+            {% set ns_sel.ca_extras = ([ns_pair.pov_a] if ns_pair.pov_a else []) + ns_pair.extras %}
+          {% else %}
+            {% set ns_sel.ca = ns_pair.pov_a or ns_pair.pov_b %}
+            {% set ns_sel.ca_extras = ([ns_pair.pov_b] if (ns_pair.pov_a and ns_pair.pov_b) else []) + ns_pair.extras %}
+          {% endif %}
+          {# Fallback to index if no label match (old orders without labels) #}
+          {% if not ns_sel.ca %}{% set ns_sel.ca = img_atts[i] if i < img_atts|length else none %}{% endif %}
+          {% set ca = ns_sel.ca %}
+          {% set ca_extras = ns_sel.ca_extras %}
+          {% set room_name = (dv.file_label if dv.file_label else (ca.file_label if ca and ca.file_label else ('Item ' ~ (i+1)))) %}
+          {% set img_st = (dv.img_status if dv.img_status else 'pending') %}
+
+        <div class="room-card {{ img_st }}-card" data-status="{{ img_st }}" id="room-card-{{ i }}">
+          <div class="room-card-header" onclick="toggleRoom({{ i }})">
+            <div class="room-card-title">
+              <span style="width:26px;height:26px;background:#EEF3FA;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#1A3A5C;flex-shrink:0;">{{ i+1 }}</span>
+              {{ room_name }}
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="pill {% if img_st == 'approved' %}pill-approved{% elif img_st == 'rejected' %}pill-rejected{% else %}pill-pending{% endif %}" id="hdr-pill-{{ i }}">{{ img_st }}</span>
+              <span class="room-toggle{% if i == 0 %} open{% endif %}" id="toggle-icon-{{ i }}">›</span>
+            </div>
+          </div>
+
+          <div class="room-card-body{% if i == 0 %} open{% endif %}" id="room-body-{{ i }}">
+
+            {# ── Determine file types for slider vs fallback ── #}
+            {% set ca_ext = ca.filename.rsplit('.',1)[-1].lower() if ca and '.' in ca.filename else '' %}
+            {% set dv_ext = dv.filename.rsplit('.',1)[-1].lower() if dv and '.' in dv.filename else '' %}
+            {# HEIC/HEIF excluded — browsers cannot render them in <img>; those fall back to link view #}
+            {% set both_images = (ca_ext in ('png','jpg','jpeg','webp','gif','avif')) and (dv_ext in ('png','jpg','jpeg','webp','gif','avif')) %}
+
+            {% if both_images %}
+            {# ── COMPARISON SLIDER ── #}
+            <div class="cmp-labels" style="align-items:center;">
+              <span class="cmp-lbl-l">📷 Client Upload — {{ room_name }}</span>
+              <span class="cmp-lbl-r">✅ Pilot Deliverable — {{ room_name }}</span>
+              <button class="cmp-fs-btn" onclick="admOpenFs('/deliverables/{{ dv.filename }}','/uploads/{{ ca.filename }}','{{ room_name }}')">⛶ Fullscreen</button>
+            </div>
+            <div class="cmp-slider-body js-cmp" id="cmp-body-{{ i }}" data-idx="{{ i }}" style="cursor:col-resize;">
+              <img src="/deliverables/{{ dv.filename }}" class="cmp-after-img" alt="Pilot staged: {{ room_name }}">
+              <img src="/uploads/{{ ca.filename }}" class="cmp-before-img" id="cmp-before-{{ i }}" alt="Client original: {{ room_name }}" style="clip-path:inset(0 50% 0 0);">
+              <div class="cmp-handle" id="cmp-handle-{{ i }}" style="transform:translateX(-50%);left:50%;">
+                <div class="cmp-handle-line"></div>
+                <div class="cmp-handle-btn">↔</div>
+              </div>
+            </div>
+            <div class="cmp-filenames">
+              <span>{{ ca.original_name }}</span>
+              <span>{{ dv.original_name }}</span>
+            </div>
+            <div class="cmp-viewbtns">
+              <a href="/uploads/{{ ca.filename }}" target="_blank" class="compare-viewbtn">↗ Original full size</a>
+              <a href="/deliverables/{{ dv.filename }}" target="_blank" class="compare-viewbtn">↗ Staged full size</a>
+            </div>
+            {% if ca_extras %}
+            <div style="margin-top:8px;padding:8px 10px;background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd;">
+              <div style="font-size:10px;font-weight:700;color:#0369a1;margin-bottom:5px;">Additional client angles for this room:</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                {% for extra in ca_extras %}
+                <img src="/uploads/{{ extra.filename }}" alt="Extra angle" style="width:80px;height:56px;object-fit:cover;border-radius:5px;border:1px solid #e2e8f0;cursor:zoom-in;" onclick="openLB(this.src,'Extra angle — {{ room_name }}')">
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+
+            {% else %}
+            {# ── FALLBACK: side-by-side for non-image or missing files ── #}
+            <div class="compare-grid">
+              <div>
+                <div class="compare-label client-lbl">📷 Client Upload — {{ room_name }}</div>
+                {% if ca %}
+                  {% if ca_ext in ('png','jpg','jpeg','webp','gif','avif','heic','heif') %}
+                  <img src="/uploads/{{ ca.filename }}" class="compare-img" alt="{{ room_name }}" onclick="openLB(this.src,'Client: {{ room_name }}')">
+                  {% else %}
+                  <div class="compare-empty"><span style="font-size:2rem;">📎</span>{{ ca.original_name }}</div>
+                  {% endif %}
+                  <div class="compare-filename">{{ ca.original_name }}</div>
+                  <a href="/uploads/{{ ca.filename }}" target="_blank" class="compare-viewbtn">↗ Full size</a>
+                {% else %}
+                <div class="compare-empty"><span style="font-size:2rem;">📷</span><span>No client photo</span></div>
+                {% endif %}
+              </div>
+              <div>
+                <div class="compare-label pilot-lbl">✅ Pilot Deliverable — {{ room_name }}</div>
+                {% if dv %}
+                  {% if dv_ext in ('mp4','mov','webm') %}
+                  <video controls style="width:100%;border-radius:10px;border:1px solid #DDE3EC;"><source src="/deliverables/{{ dv.filename }}"></video>
+                  {% elif dv_ext in ('png','jpg','jpeg','webp','gif') %}
+                  <img src="/deliverables/{{ dv.filename }}" class="compare-img" alt="{{ room_name }}" onclick="openLB(this.src,'Pilot: {{ room_name }}')">
+                  {% else %}
+                  <div class="compare-empty"><span style="font-size:2rem;">📎</span>{{ dv.original_name }}</div>
+                  {% endif %}
+                  <div class="compare-filename">{{ dv.original_name }}</div>
+                  <a href="/deliverables/{{ dv.filename }}" target="_blank" class="compare-viewbtn">↗ Full size</a>
+                {% else %}
+                <div class="compare-empty"><span style="font-size:2rem;">⏳</span><span>Not uploaded yet</span></div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
+            {% if dv and order.status in ('submitted','under_review','delivered','rejected') %}
+            <div class="img-actions">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                <span style="font-size:0.75rem;font-weight:700;color:#8B9AAB;">Image Status:</span>
+                <span class="img-status-badge img-status-{{ img_st }}" id="badge-{{ dv.id }}">{{ img_st }}</span>
+                {% if dv.img_remark %}<span style="font-size:0.72rem;color:#8B9AAB;font-style:italic;">{{ dv.img_remark }}</span>{% endif %}
+              </div>
+              <textarea class="remark-input" id="remark-{{ dv.id }}" rows="2" placeholder="Rejection remark for pilot (required when rejecting)…">{{ dv.img_remark or '' }}</textarea>
+              <div class="action-btns">
+                <button class="btn-approve-img {% if img_st == 'approved' %}btn-disabled{% endif %}" onclick="reviewImg({{ dv.id }},'approve',{{ i }})" id="btn-a-{{ dv.id }}">✓ Approve</button>
+                <button class="btn-reject-img {% if img_st == 'rejected' %}btn-disabled{% endif %}"  onclick="reviewImg({{ dv.id }},'reject',{{ i }})"  id="btn-r-{{ dv.id }}">✗ Reject</button>
+              </div>
+            </div>
+            {% elif not dv %}
+            <div style="font-size:0.78rem;color:#8B9AAB;padding-top:10px;border-top:1px solid #EEF2F8;">Waiting for pilot to upload this image.</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div style="text-align:center;padding:3rem;color:#8B9AAB;">No deliverables uploaded yet.</div>
+      {% endif %}
+
+      {% else %}
+      <div class="od-card" style="text-align:center;padding:2.5rem;">
+
+        {% if order.status == 'delivered' %}
+        <!-- ── Awaiting payment confirmation ── -->
+        <div style="font-size:2.5rem;margin-bottom:12px;">💬</div>
+        <div style="font-weight:800;font-size:1rem;color:#B45309;margin-bottom:6px;">Awaiting Payment Confirmation</div>
+        <div style="font-size:0.82rem;color:#8B9AAB;margin-bottom:20px;">Client has been asked to pay ₹{{ order.total_price // 100 }} via UPI and send a WhatsApp screenshot. Verify in your UPI app, then confirm below.</div>
+        <div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:10px;padding:12px 16px;margin-bottom:18px;text-align:left;font-size:0.82rem;">
+          <strong style="color:#92400E;">How to verify:</strong><br>
+          <span style="color:#78350F;">1. Check WhatsApp for client's payment screenshot<br>
+          2. Cross-check UTR / transaction ID in your UPI app<br>
+          3. Click "Confirm Payment" only after you've verified the transaction</span>
+        </div>
+        {% if deliverables %}
+        <div style="margin-bottom:18px;text-align:left;">
+          {% for d in deliverables %}
+          <div class="file-row">
+            <div><div class="file-row-name">{{ d.file_label or d.original_name }}</div><div class="file-row-meta">{{ d.original_name }}</div></div>
+            <a href="/deliverables/{{ d.filename }}" target="_blank" style="font-size:0.75rem;font-weight:700;color:#1A3A5C;border:1px solid #DDE3EC;border-radius:6px;padding:4px 12px;text-decoration:none;">View</a>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <button onclick="confirmPayment()" id="confirm-pay-btn"
+          style="background:linear-gradient(135deg,#16A34A,#15803D);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:0.92rem;font-weight:800;cursor:pointer;width:100%;letter-spacing:0.02em;box-shadow:0 4px 14px rgba(22,163,74,0.3);">
+          ✓ Confirm Payment &amp; Unlock Download
+        </button>
+        <div style="font-size:0.72rem;color:#8B9AAB;margin-top:10px;">Only click after you have verified the payment. This cannot be undone.</div>
+
+        {% elif order.status == 'approved' %}
+        <div style="font-size:2.5rem;margin-bottom:12px;">✅</div>
+        <div style="font-weight:700;font-size:1rem;color:#1A3A5C;">Payment confirmed — download unlocked for client</div>
+        <div style="font-size:0.82rem;color:#8B9AAB;margin-top:6px;">Client can now download their clean files.</div>
+        {% if deliverables %}
+        <div style="margin-top:16px;text-align:left;">
+          {% for d in deliverables %}
+          <div class="file-row">
+            <div><div class="file-row-name">{{ d.file_label or d.original_name }}</div><div class="file-row-meta">{{ d.original_name }}</div></div>
+            <a href="/deliverables/{{ d.filename }}" target="_blank" style="font-size:0.75rem;font-weight:700;color:#1A3A5C;border:1px solid #DDE3EC;border-radius:6px;padding:4px 12px;text-decoration:none;">View</a>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div style="font-size:2.5rem;margin-bottom:12px;">⏳</div>
+        <div style="font-weight:700;font-size:1rem;color:#1A3A5C;">Pilot is working on this order</div>
+        <div style="font-size:0.82rem;color:#8B9AAB;margin-top:6px;">QC review panel activates when pilot submits for review.</div>
+        {% endif %}
+
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLB()">
+  <span id="lb-close" onclick="closeLB()">×</span>
+  <img id="lb-img" src="" alt="" onclick="event.stopPropagation()">
+  <div id="lb-label"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+const ORDER_ID = {{ order.id }};
+
+function showToast(msg, ok) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;font-size:0.875rem;font-weight:600;z-index:9998;box-shadow:0 4px 24px rgba(0,0,0,0.15);display:block;background:' + (ok ? '#D1FAE5;color:#065F46' : '#FEE2E2;color:#991B1B');
+  setTimeout(function(){ t.style.display='none'; }, 3500);
+}
+
+function toggleRoom(i) {
+  var body = document.getElementById('room-body-' + i);
+  var icon = document.getElementById('toggle-icon-' + i);
+  var open = body.classList.toggle('open');
+  icon.classList.toggle('open', open);
+  // Init slider for this card on first expand (lazy)
+  if (open) initAdminSliders(body);
+}
+
+// ── Admin comparison slider init ──────────────────────────────
+// Called on card expand so getBoundingClientRect() returns real dimensions.
+// Also called once on page load for the first card (already open).
+function initAdminSliders(container) {
+  (container || document).querySelectorAll('.js-cmp').forEach(function(body) {
+    if (body.dataset.sliderInit) return;
+    body.dataset.sliderInit = '1';
+    var idx = parseInt(body.dataset.idx);
+    var dragging = false;
+    function getPct(e) {
+      var rect = body.getBoundingClientRect();
+      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      return Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    }
+    function move(pct) {
+      var before = document.getElementById('cmp-before-' + idx);
+      var handle = document.getElementById('cmp-handle-' + idx);
+      if (before) before.style.clipPath = 'inset(0 ' + (100 - pct).toFixed(2) + '% 0 0)';
+      if (handle) handle.style.left = pct.toFixed(2) + '%';
+    }
+    body.addEventListener('mousedown', function(e) { dragging = true; move(getPct(e)); e.preventDefault(); });
+    body.addEventListener('touchstart', function(e) { dragging = true; move(getPct(e)); }, { passive: true });
+    document.addEventListener('mousemove', function(e) { if (dragging) move(getPct(e)); });
+    document.addEventListener('touchmove', function(e) { if (dragging) move(getPct(e)); }, { passive: true });
+    document.addEventListener('mouseup', function() { dragging = false; });
+    document.addEventListener('touchend', function() { dragging = false; });
+  });
+}
+// Init sliders in the first card (open by default on page load)
+document.addEventListener('DOMContentLoaded', function() {
+  var firstBody = document.getElementById('room-body-0');
+  if (firstBody) initAdminSliders(firstBody);
+});
+
+function filterRooms(status, btn) {
+  document.querySelectorAll('.qc-filter-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  document.querySelectorAll('.room-card').forEach(function(card) {
+    card.style.display = (status === 'all' || card.dataset.status === status) ? '' : 'none';
+  });
+}
+
+function reviewImg(dvId, action, cardIdx) {
+  var remark = document.getElementById('remark-' + dvId).value.trim();
+  if (action === 'reject' && !remark) {
+    showToast('Enter a rejection remark before rejecting.', false);
+    document.getElementById('remark-' + dvId).focus();
+    return;
+  }
+  fetch('/api/admin/review-image', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body:JSON.stringify({deliverable_id:dvId, action:action, remark:remark})
+  }).then(function(r){ return r.json(); }).then(function(data) {
+    if (data.success) {
+      var st = data.img_status;
+      document.getElementById('badge-' + dvId).textContent = st;
+      document.getElementById('badge-' + dvId).className = 'img-status-badge img-status-' + st;
+      var card = document.getElementById('room-card-' + cardIdx);
+      card.className = 'room-card ' + st + '-card';
+      card.dataset.status = st;
+      var pill = document.getElementById('hdr-pill-' + cardIdx);
+      if (pill) { pill.textContent = st; pill.className = 'pill pill-' + (st === 'approved' ? 'approved' : st === 'rejected' ? 'rejected' : 'pending'); }
+      if (st === 'approved') {
+        document.getElementById('btn-a-' + dvId).classList.add('btn-disabled');
+        document.getElementById('btn-r-' + dvId).classList.remove('btn-disabled');
+      } else {
+        document.getElementById('btn-r-' + dvId).classList.add('btn-disabled');
+        document.getElementById('btn-a-' + dvId).classList.remove('btn-disabled');
+      }
+      showToast(action === 'approve' ? '✓ Image approved' : '✗ Rejected — pilot notified', action === 'approve');
+    } else { showToast(data.error || 'Error', false); }
+  }).catch(function(){ showToast('Network error', false); });
+}
+
+function confirmPayment() {
+  var btn = document.getElementById('confirm-pay-btn');
+  if (!confirm('Have you verified the payment in your UPI app? This will immediately unlock the client\'s download.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Confirming…';
+  fetch('/api/admin/confirm-payment', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({order_id: ORDER_ID})
+  }).then(function(r){ return r.json(); }).then(function(data) {
+    if (data.success) {
+      showToast('✓ Payment confirmed — download unlocked for client', true);
+      setTimeout(function(){ location.reload(); }, 1500);
+    } else {
+      btn.disabled = false;
+      btn.textContent = '✓ Confirm Payment & Unlock Download';
+      showToast(data.error || 'Error', false);
+    }
+  }).catch(function(){ btn.disabled = false; showToast('Network error', false); });
+}
+
+function orderQC(action) {
+  var note = (document.getElementById('qc-note-global') || {}).value || '';
+  var url = action === 'approve' ? '/api/admin/mark-delivered' : '/api/admin/reject-to-pilot';
+  fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':CSRF},
+    body:JSON.stringify({order_id:ORDER_ID, note:note.trim()})
+  }).then(function(r){ return r.json(); }).then(function(data) {
+    if (data.success) {
+      showToast(action === 'approve' ? '✓ Delivered to client!' : '✗ Rejected back to pilot', action === 'approve');
+      setTimeout(function(){ location.reload(); }, 1500);
+    } else { showToast(data.error || 'Error', false); }
+  }).catch(function(){ showToast('Network error', false); });
+}
+
+function openLB(src, label) {
+  document.getElementById('lb-img').src = src;
+  document.getElementById('lb-label').textContent = label || '';
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLB() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lb-img').src = '';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeLB(); admCloseFsModal(); }
+});
+
+// ── Timing & SLA Tracker Helpers (Indian Standard Time) ──
+function parseUtcDate(dateStr) {
+  if (!dateStr) return null;
+  let s = dateStr.trim();
+  if (!s.includes('T') && s.includes(' ')) {
+    s = s.replace(' ', 'T');
+  }
+  const tIndex = s.indexOf('T');
+  if (tIndex !== -1) {
+    const timePart = s.substring(tIndex);
+    const hasOffset = timePart.includes('Z') || timePart.includes('+') || timePart.includes('-');
+    if (!hasOffset) {
+      if (dateStr.includes('T')) {
+        s = s + '+05:30';
+      } else {
+        s = s + 'Z';
+      }
+    }
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function formatISTDate(date) {
+  if (!date) return '—';
+  try {
+    return date.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }) + ' IST';
+  } catch (e) {
+    return date.toLocaleString();
+  }
+}
+
+function formatDuration(ms) {
+  if (ms < 0) ms = 0;
+  const totalSecs = Math.floor(ms / 1000);
+  const hrs = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  
+  let parts = [];
+  if (hrs > 0) parts.push(hrs + 'h');
+  if (mins > 0 || hrs > 0) parts.push(mins + 'm');
+  parts.push(secs + 's');
+  return parts.join(' ');
+}
+
+function updateSLATimers() {
+  document.querySelectorAll('.local-time').forEach(el => {
+    if (el.dataset.formatted) return;
+    const date = parseUtcDate(el.dataset.utc);
+    if (date) {
+      el.textContent = formatISTDate(date);
+      el.dataset.formatted = 'true';
+    } else if (el.textContent.trim() === '—' || el.textContent.trim() === '') {
+      el.textContent = 'Pending';
+    }
+  });
+
+  document.querySelectorAll('.sla-timer').forEach(el => {
+    const created = parseUtcDate(el.dataset.created);
+    const completed = parseUtcDate(el.dataset.completed);
+    const status = el.dataset.status;
+    
+    if (!created) {
+      el.textContent = '—';
+      return;
+    }
+    
+    const isFinished = (status === 'delivered' || status === 'approved');
+    if (isFinished && completed) {
+      const diff = completed.getTime() - created.getTime();
+      el.innerHTML = '<span style="color:#16A34A; font-weight:600;">⏱ Executed in: ' + formatDuration(diff) + '</span>';
+    } else {
+      const diff = new Date().getTime() - created.getTime();
+      el.innerHTML = '<span style="color:#d97706; font-weight:700;">⏳ Elapsed: ' + formatDuration(diff) + '</span>';
+    }
+  });
+}
+
+// Start SLA updates in detail view
+document.addEventListener('DOMContentLoaded', () => {
+  updateSLATimers();
+  setInterval(updateSLATimers, 1000);
+});
+
+// Admin fullscreen comparison modal
+var _admFsDragging = false;
+function admOpenFs(afterSrc, beforeSrc, label) {
+  var modal = document.getElementById('adm-fs-modal');
+  document.getElementById('adm-fs-after').src = afterSrc;
+  document.getElementById('adm-fs-before').src = beforeSrc;
+  document.getElementById('adm-fs-before').style.clipPath = 'inset(0 50% 0 0)';
+  document.getElementById('adm-fs-handle').style.left = '50%';
+  document.getElementById('adm-fs-label').textContent = label || 'QC Comparison';
+  modal.classList.add('open');
+  var inner = document.getElementById('adm-fs-inner');
+  inner.onmousedown = function(e) { _admFsDragging = true; _admFsMove(e, inner); e.preventDefault(); };
+  inner.ontouchstart = function(e) { _admFsDragging = true; _admFsMove(e, inner); };
+  document.onmousemove = function(e) { if (_admFsDragging) _admFsMove(e, inner); };
+  document.ontouchmove = function(e) { if (_admFsDragging) _admFsMove(e, inner); };
+  document.onmouseup = function() { _admFsDragging = false; };
+  document.ontouchend = function() { _admFsDragging = false; };
+}
+function _admFsMove(e, inner) {
+  var rect = inner.getBoundingClientRect();
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var pct = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+  document.getElementById('adm-fs-before').style.clipPath = 'inset(0 ' + (100-pct).toFixed(2) + '% 0 0)';
+  document.getElementById('adm-fs-handle').style.left = pct.toFixed(2) + '%';
+}
+function admCloseFsModal() {
+  var modal = document.getElementById('adm-fs-modal');
+  if (modal) modal.classList.remove('open');
+  _admFsDragging = false;
+  document.onmousemove = null; document.ontouchmove = null;
+  document.onmouseup = null; document.ontouchend = null;
+}
+</script>
+
+<!-- Admin fullscreen comparison modal -->
+<div id="adm-fs-modal">
+  <div id="adm-fs-bar">
+    <span id="adm-fs-label">QC Comparison Preview</span>
+    <span id="adm-fs-hints">← Drag to compare →</span>
+    <button id="adm-fs-close" onclick="admCloseFsModal()">✕ Close</button>
+  </div>
+  <div id="adm-fs-inner">
+    <img id="adm-fs-after" src="" alt="Deliverable">
+    <img id="adm-fs-before" src="" alt="Original Photo">
+    <div id="adm-fs-handle">
+      <div id="adm-fs-handle-line"></div>
+      <div id="adm-fs-handle-btn">↔</div>
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/mobile.js') }}" defer></script>
+</body>
+</html>

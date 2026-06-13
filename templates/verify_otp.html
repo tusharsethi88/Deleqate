@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify OTP — Deleqate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+  body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--surface-low);}
+  .auth-box{background:var(--white);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);padding:2.5rem;width:100%;max-width:420px;margin:1rem;}
+  .auth-logo{text-align:center;font-size:1.5rem;font-weight:800;color:var(--navy);margin-bottom:0.25rem;}
+  .auth-logo span{color:var(--gold);}
+  .auth-sub{text-align:center;font-size:0.875rem;color:var(--gray-500);margin-bottom:2rem;}
+  .phone-display{text-align:center;background:#EEF4FB;border:1px solid #C2D8EC;border-radius:var(--radius-lg);padding:0.75rem 1rem;margin-bottom:1.5rem;font-weight:700;color:var(--navy);font-size:1rem;}
+  .phone-display small{font-weight:400;color:var(--gray-500);font-size:0.75rem;display:block;margin-bottom:0.2rem;}
+  .otp-inputs{display:flex;gap:0.5rem;justify-content:center;margin-bottom:1.5rem;}
+  .otp-inputs input{width:46px;height:54px;border:2px solid var(--gray-200);border-radius:var(--radius);text-align:center;font-size:1.5rem;font-weight:800;color:var(--navy);outline:none;transition:border-color 0.15s;}
+  .otp-inputs input:focus{border-color:var(--navy);}
+  .otp-hidden{display:none;}
+  .resend-row{text-align:center;font-size:0.8rem;color:var(--gray-500);margin-top:0.75rem;}
+  .resend-row a{color:var(--navy);font-weight:600;}
+  #countdown{font-weight:700;color:var(--navy);}
+
+  /* ── Mobile responsive ── */
+  @media(max-width:480px){
+    body{ align-items:flex-start; padding-top:2rem; }
+    .auth-box{ padding:1.5rem 1.125rem !important; margin:.75rem !important; }
+    .auth-logo{ font-size:1.25rem; }
+  }
+  /* iOS zoom fix — inputs >=16px */
+  .form-control, input[type=email], input[type=password],
+  input[type=tel], input[type=text], select, textarea { font-size:1rem !important; }
+
+</style>
+</head>
+<body>
+<div class="auth-box">
+  <div class="auth-logo">Dele<span>qate</span></div>
+  <div class="auth-sub">Enter your OTP</div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ 'danger' if cat == 'error' else ('success' if cat == 'success' else 'info') }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="phone-display">
+    <small>OTP sent to WhatsApp</small>
+    +91 {{ phone }}
+  </div>
+
+  <form method="POST" action="{{ url_for('verify_otp') }}" id="otpForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <!-- 6 individual digit boxes that combine into hidden input -->
+    <div class="otp-inputs" id="otpBoxes">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit" autofocus>
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" class="otp-digit">
+    </div>
+    <input type="hidden" name="otp" id="otpHidden">
+    <button type="submit" class="btn btn-primary btn-full" id="verifyBtn" disabled>Verify OTP →</button>
+  </form>
+
+  <div class="resend-row">
+    <span id="resendMsg">Resend in <span id="countdown">10:00</span></span>
+    <span id="resendLink" style="display:none;"><a href="{{ url_for('login_phone') }}">Resend OTP</a></span>
+  </div>
+
+  <p style="text-align:center;margin-top:1.25rem;font-size:0.8125rem;">
+    <a href="{{ url_for('login_phone') }}" style="color:var(--gray-400);">← Change number</a>
+  </p>
+</div>
+
+<script>
+  // Auto-advance OTP boxes
+  const digits = document.querySelectorAll('.otp-digit');
+  const hidden = document.getElementById('otpHidden');
+  const btn = document.getElementById('verifyBtn');
+
+  digits.forEach((d, i) => {
+    d.addEventListener('input', e => {
+      d.value = d.value.replace(/[^0-9]/g,'').slice(-1);
+      if (d.value && i < 5) digits[i+1].focus();
+      syncOtp();
+    });
+    d.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !d.value && i > 0) {
+        digits[i-1].focus(); digits[i-1].value = '';
+        syncOtp();
+      }
+    });
+    d.addEventListener('paste', e => {
+      const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+      if (paste.length >= 6) {
+        digits.forEach((box, idx) => box.value = paste[idx] || '');
+        digits[5].focus(); syncOtp();
+        e.preventDefault();
+      }
+    });
+  });
+
+  function syncOtp() {
+    const val = Array.from(digits).map(d => d.value).join('');
+    hidden.value = val;
+    btn.disabled = val.length < 6;
+  }
+
+  // Countdown timer (10 minutes)
+  let secs = 600;
+  const cd = document.getElementById('countdown');
+  const resendMsg = document.getElementById('resendMsg');
+  const resendLink = document.getElementById('resendLink');
+  const timer = setInterval(() => {
+    secs--;
+    const m = Math.floor(secs/60), s = secs%60;
+    cd.textContent = `${m}:${String(s).padStart(2,'0')}`;
+    if (secs <= 0) {
+      clearInterval(timer);
+      resendMsg.style.display='none';
+      resendLink.style.display='inline';
+    }
+  }, 1000);
+</script>
+<script src="{{ url_for('static', filename='js/mobile.js') }}" defer></script>
+</body>
+</html>

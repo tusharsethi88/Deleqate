@@ -1,0 +1,2187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Place Order — Deleqate</title>
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+  .wizard-wrap { max-width:860px; margin:2.5rem auto; padding:0 1.5rem 4rem; }
+  .cluster-label { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; color:var(--gray-400); margin:1.25rem 0 0.6rem; }
+  .sku-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.75rem; margin-bottom:0.5rem; }
+  .sku-pick { border:2px solid var(--gray-200); border-radius:var(--radius-lg); padding:1rem 0.875rem; cursor:pointer; transition:all 0.18s; background:var(--white); }
+  .sku-pick:hover { border-color:var(--navy-light); box-shadow:0 2px 8px rgba(26,58,92,0.08); }
+  .sku-pick.selected { border-color:var(--navy); background:var(--navy); color:var(--white); }
+  .sku-pick.selected .sp-price { color:var(--gold); }
+  .sku-pick.selected .sp-sub { color:rgba(255,255,255,0.6); }
+  .sp-top { display:flex; align-items:center; gap:0.625rem; margin-bottom:0.3rem; }
+  .sp-icon { font-size:1.3rem; }
+  .sp-name { font-weight:700; font-size:0.875rem; }
+  .sp-price { font-weight:800; font-size:1.05rem; color:var(--gold-dark); }
+  .sp-sub { font-size:0.7rem; color:var(--gray-500); margin-top:0.1rem; }
+  .sku-form { display:none; }
+  .sku-form.visible { display:block; }
+  .form-section { background:var(--white); border-radius:var(--radius-lg); padding:1.5rem; margin-bottom:1rem; box-shadow:var(--shadow); }
+  .form-section-title { font-weight:700; font-size:0.9375rem; color:var(--navy); margin-bottom:1.25rem; display:flex; align-items:center; gap:0.5rem; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; }
+  .chips { display:flex; flex-wrap:wrap; gap:0.45rem; }
+  .chip-suggest-btn { padding:0.3rem 0.75rem; border:2px solid var(--gray-300); border-radius:20px; font-size:0.78rem; font-weight:600; color:var(--gray-600); background:var(--gray-50); cursor:pointer; transition:all 0.15s; }
+  .chip-suggest-btn:hover { border-color:var(--primary); color:var(--primary); background:#fff8f0; }
+  .chip { position:relative; }
+  .chip input { position:absolute; opacity:0; width:0; }
+  .chip label { display:block; padding:0.35rem 0.8rem; border:2px solid var(--gray-200); border-radius:20px; font-size:0.8rem; font-weight:600; color:var(--gray-600); cursor:pointer; transition:all 0.15s; user-select:none; }
+  .chip input:checked + label { border-color:var(--navy); background:var(--navy); color:var(--white); }
+  .check-chips { display:flex; flex-wrap:wrap; gap:0.45rem; }
+  .check-chip { position:relative; }
+  .check-chip input { position:absolute; opacity:0; width:0; }
+  .check-chip label { display:block; padding:0.35rem 0.8rem; border:2px solid var(--gray-200); border-radius:20px; font-size:0.8rem; font-weight:600; color:var(--gray-600); cursor:pointer; transition:all 0.15s; }
+  .check-chip input:checked + label { border-color:var(--gold-dark); background:var(--gold-dark); color:var(--white); }
+  .upload-box { border:2.5px dashed var(--gray-300); border-radius:var(--radius-lg); padding:1.25rem 1rem; text-align:center; background:var(--gray-50); position:relative; cursor:pointer; transition:all 0.2s; }
+  .upload-box:hover,.upload-box.has-file { border-color:var(--success); background:rgba(16,185,129,0.04); }
+  .upload-box.drag-over { border-color:#6366f1; background:rgba(99,102,241,0.07); transform:scale(1.01); }
+  .upload-box input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; z-index:1; }
+  .upload-drag-hint { font-size:0.65rem; color:var(--gray-400); margin-top:0.2rem; letter-spacing:0.02em; }
+  .upload-icon { font-size:1.5rem; margin-bottom:0.3rem; }
+  .upload-label { font-weight:700; font-size:0.875rem; color:var(--gray-700); }
+  .upload-hint { font-size:0.72rem; color:var(--gray-500); margin-top:0.15rem; }
+  .file-shown { font-size:0.72rem; color:var(--success); font-weight:600; margin-top:0.3rem; word-break:break-all; }
+  .multi-file-list { display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem; min-height:0; }
+  .file-chip-item { display:inline-flex; align-items:center; gap:5px; background:#EBF5FB; border:1px solid #A8D8F0; border-radius:20px; padding:3px 10px 3px 8px; font-size:0.72rem; font-weight:600; color:var(--navy); }
+  .file-chip-item .fc-name { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .file-chip-remove { background:none; border:none; cursor:pointer; color:#7BA8C4; font-size:0.9rem; line-height:1; padding:0; margin-left:2px; }
+  .file-chip-remove:hover { color:var(--error,#ef4444); }
+  .encourage-box { background:linear-gradient(135deg,#EEF4FB,#F5F8FC); border:1.5px solid #C2D8EC; border-left:4px solid var(--navy); border-radius:var(--radius-lg); padding:0.9rem 1.1rem; margin-bottom:1.5rem; display:flex; align-items:flex-start; gap:0.75rem; }
+  .encourage-icon { font-size:1.4rem; flex-shrink:0; }
+  .encourage-body { flex:1; }
+  .encourage-title { font-weight:700; font-size:0.875rem; color:var(--navy); margin-bottom:0.2rem; }
+  .encourage-text { font-size:0.8rem; color:var(--gray-600); line-height:1.5; }
+  .qty-row { display:flex; align-items:center; gap:1rem; }
+  .qty-btn { width:36px; height:36px; border-radius:50%; border:2px solid var(--gray-300); background:var(--white); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--navy); transition:all 0.15s; }
+  .qty-btn:hover { border-color:var(--navy); background:var(--navy); color:var(--white); }
+  .qty-val { font-size:1.75rem; font-weight:800; color:var(--navy); min-width:38px; text-align:center; }
+  .price-card { background:linear-gradient(135deg,var(--navy),var(--navy-dark)); border-radius:var(--radius-xl); padding:1.5rem 1.75rem; color:var(--white); margin-top:1.5rem; }
+  .price-amount { font-size:2.5rem; font-weight:800; color:var(--gold); }
+  .price-breakdown { font-size:0.875rem; color:rgba(255,255,255,0.6); margin-top:0.25rem; }
+  .price-sla { display:flex; align-items:center; gap:0.5rem; font-size:0.875rem; color:rgba(255,255,255,0.85); margin-top:0.75rem; }
+  .submit-bar { position:sticky; bottom:0; background:var(--white); border-top:1px solid var(--gray-100); padding:1rem 0; margin-top:1.5rem; display:flex; align-items:center; gap:1rem; box-shadow:0 -4px 16px rgba(0,0,0,0.06); z-index:50; border-radius:var(--radius-lg) var(--radius-lg) 0 0; }
+  @media(max-width:768px){
+    .sku-grid{grid-template-columns:1fr 1fr;}
+    .grid-2,.grid-3{grid-template-columns:1fr;}
+    .submit-bar{flex-direction:column;}
+  }
+
+  /* ── Order wizard mobile ── */
+  @media(max-width:768px){
+    .wizard-wrap{ padding:1rem 1rem 3rem !important; margin:0 !important; }
+    .sku-grid{ grid-template-columns:1fr 1fr !important; }
+    .grid-2,.grid-3{ grid-template-columns:1fr !important; }
+    .steps-bar{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  }
+  @media(max-width:480px){
+    .sku-grid{ grid-template-columns:1fr !important; }
+    .sp-name{ font-size:.8125rem; }
+    .sp-price{ font-size:.9375rem; }
+    .form-section{ padding:.875rem !important; }
+    .encourage-box{ flex-direction:column; gap:.5rem; }
+    .chips{ gap:.3rem; }
+  }
+
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/" class="navbar-brand">Dele<span>qate</span></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false" onclick="this.classList.toggle('open');document.querySelector('.navbar-nav').classList.toggle('open');document.body.style.overflow=this.classList.contains('open')?'hidden':'';"><span></span><span></span><span></span></button>
+  <div class="navbar-nav">
+    <a href="/">Home</a>
+    {% if current_user.is_authenticated %}
+      <a href="/client/orders">My Orders</a>
+      <a href="{{ url_for('logout') }}" style="font-size:0.8125rem;font-weight:600;color:var(--navy);border:2px solid var(--navy);border-radius:20px;padding:0.35rem 1rem;transition:background 0.2s,color 0.2s;" onmouseover="this.style.background='var(--navy)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">Logout</a>
+    {% else %}<a href="/login">Login</a>{% endif %}
+  </div>
+</nav>
+<div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
+<div class="wizard-wrap">
+  <div style="margin-bottom:1.25rem;">
+    <h1 style="font-size:1.875rem;margin-bottom:0.3rem;">Place Your Order</h1>
+    <p style="color:var(--gray-500);">Select a task, fill your brief, submit. We'll WhatsApp you confirmation within 15 minutes.</p>
+  </div>
+
+  <div class="encourage-box">
+    <span class="encourage-icon">💡</span>
+    <div class="encourage-body">
+      <div class="encourage-title">More detail = dramatically better output</div>
+      <div class="encourage-text">The brief you fill below goes directly to your assigned pilot. Specific room labels, tone preferences, buyer profiles, avoid-elements — every detail you add means less back-and-forth and a sharper first delivery. Upload as many reference images as you can. Pilots can't guess what you want — you can tell them.</div>
+    </div>
+  </div>
+
+  <!-- SKU PICKER -->
+  <div style="margin-bottom:1.5rem;">
+    <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--gray-400);margin-bottom:0.5rem;">Step 1 — Select Task</div>
+
+    <div class="cluster-label">🏠 Real Estate</div>
+    <div class="sku-grid">
+      <div class="sku-pick" data-sku="virtual_staging" onclick="selectSku('virtual_staging',this)">
+        <div class="sp-top"><span class="sp-icon">🛋️</span><span class="sp-name">Virtual Staging</span></div>
+        <div class="sp-price">₹799<small> flat</small></div>
+        <div class="sp-sub">2 Bedrooms + Living Room + Kitchen · AI-furnished renders · 3–5 hrs</div>
+      </div>
+      <div class="sku-pick" data-sku="property_reel" onclick="selectSku('property_reel',this)">
+        <div class="sp-top"><span class="sp-icon">🎬</span><span class="sp-name">Property Marketing Reel</span></div>
+        <div class="sp-price">from ₹999</div>
+        <div class="sp-sub">Photos → animated reel · Hook / Standard / Showcase · WhatsApp / Instagram · 3–5 hrs</div>
+      </div>
+      <div class="sku-pick" data-sku="property_social_card" onclick="selectSku('property_social_card',this)">
+        <div class="sp-top"><span class="sp-icon">🃏</span><span class="sp-name">Property Social Card Pack</span></div>
+        <div class="sp-price">₹499</div>
+        <div class="sp-sub">Square 1:1 (Post/WhatsApp Card) + Vertical 9:16 (Story) · 1–2 hrs</div>
+      </div>
+    </div>
+
+    <div class="cluster-label">📦 E-commerce</div>
+    <div class="sku-grid">
+      <div class="sku-pick" data-sku="bg_cleanup" onclick="selectSku('bg_cleanup',this)">
+        <div class="sp-top"><span class="sp-icon">✂️</span><span class="sp-name">Background Cleanup</span></div>
+        <div class="sp-price">₹79<small>/image</small></div>
+        <div class="sp-sub">Product photo → clean white bg · min 5 images</div>
+      </div>
+      <div class="sku-pick" data-sku="product_listing" onclick="selectSku('product_listing',this)">
+        <div class="sp-top"><span class="sp-icon">🛒</span><span class="sp-name">Product Listing Creation</span></div>
+        <div class="sp-price">₹199<small>/product</small></div>
+        <div class="sp-sub">Photo + info → Amazon / Flipkart listing · 1–2 hrs</div>
+      </div>
+      <div class="sku-pick" data-sku="product_mockup" onclick="selectSku('product_mockup',this)">
+        <div class="sp-top"><span class="sp-icon">🌅</span><span class="sp-name">Product Lifestyle Mockup</span></div>
+        <div class="sp-price">₹299<small>/image</small></div>
+        <div class="sp-sub">Product photo → lifestyle scene · 1.5–2.5 hrs</div>
+      </div>
+    </div>
+
+    <div class="cluster-label">📱 SMB Visual Content</div>
+    <div class="sku-grid">
+      <div class="sku-pick" data-sku="instagram_carousel" onclick="selectSku('instagram_carousel',this)">
+        <div class="sp-top"><span class="sp-icon">🎠</span><span class="sp-name">Instagram Carousel</span></div>
+        <div class="sp-price">₹649</div>
+        <div class="sp-sub">Brief → branded 5–10 slide carousel · 2–3 hrs</div>
+      </div>
+      <div class="sku-pick" data-sku="brand_demo_video" onclick="selectSku('brand_demo_video',this)">
+        <div class="sp-top"><span class="sp-icon">📹</span><span class="sp-name">Brand Demo Video</span></div>
+        <div class="sp-price">₹1,249</div>
+        <div class="sp-sub">Photos → 15–60 sec product video · 3–5 hrs</div>
+      </div>
+      <div class="sku-pick" data-sku="announcement_pack" onclick="selectSku('announcement_pack',this)">
+        <div class="sp-top"><span class="sp-icon">📣</span><span class="sp-name">Announcement Pack</span></div>
+        <div class="sp-price">₹499</div>
+        <div class="sp-sub">Launch / offer / event → Post + Story + WA card · 2–3 hrs</div>
+      </div>
+    </div>
+
+    <div class="cluster-label">🎨 Personal & Brand</div>
+    <div class="sku-grid">
+      <div class="sku-pick" data-sku="brand_starter_kit" onclick="selectSku('brand_starter_kit',this)">
+        <div class="sp-top"><span class="sp-icon">🚀</span><span class="sp-name">Brand Starter Kit</span></div>
+        <div class="sp-price">₹1,999</div>
+        <div class="sp-sub">Brief → logo + palette + fonts + assets · 4–6 hrs</div>
+      </div>
+      <div class="sku-pick" data-sku="menu_design" onclick="selectSku('menu_design',this)">
+        <div class="sp-top"><span class="sp-icon">🍽️</span><span class="sp-name">Menu Design</span></div>
+        <div class="sp-price">₹799</div>
+        <div class="sp-sub">Items list → print-ready menu · 3–4 hrs</div>
+      </div>
+      <div class="sku-pick" data-sku="podcast_reel" onclick="selectSku('podcast_reel',this)">
+        <div class="sp-top"><span class="sp-icon">🎙️</span><span class="sp-name">Podcast Highlight Reel</span></div>
+        <div class="sp-price">₹649</div>
+        <div class="sp-sub">Raw audio → audiogram with captions · 2–3 hrs</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORMS -->
+  <form id="orderForm" enctype="multipart/form-data" onsubmit="submitOrder(event)">
+    <input type="hidden" name="task_type" id="taskTypeInput" value="">
+
+    <!-- ═══ VIRTUAL STAGING ═══ -->
+    <div class="sku-form" id="form-virtual_staging">
+
+      <!-- SECTION 0: Choose Tier (BUG 4/5 fix) -->
+      <div class="form-section">
+        <div class="form-section-title">🏠 Choose Your Package</div>
+        <div class="chips" style="flex-wrap:wrap;gap:0.75rem;">
+          <div class="chip" style="flex:1;min-width:180px;">
+            <input type="radio" name="vs_tier" value="starter" id="vs-tier-starter">
+            <label for="vs-tier-starter" style="display:block;padding:0.75rem 1rem;">
+              <div style="font-weight:600;font-size:0.95rem;">Starter</div>
+              <div style="font-size:0.75rem;color:var(--gray-500);margin-top:0.2rem;">2 rooms · one render per room</div>
+              <div style="font-weight:700;color:var(--navy);margin-top:0.3rem;">₹649</div>
+            </label>
+          </div>
+          <div class="chip" style="flex:1;min-width:180px;">
+            <input type="radio" name="vs_tier" value="full" id="vs-tier-full" checked>
+            <label for="vs-tier-full" style="display:block;padding:0.75rem 1rem;">
+              <div style="font-weight:600;font-size:0.95rem;">Full Staging</div>
+              <div style="font-size:0.75rem;color:var(--gray-500);margin-top:0.2rem;">up to 4 rooms · ₹100/extra room</div>
+              <div style="font-weight:700;color:var(--navy);margin-top:0.3rem;">₹799</div>
+            </label>
+          </div>
+        </div>
+        <div style="margin-top:0.5rem;font-size:0.78rem;color:var(--gray-500);">₹799 covers up to 4 rooms. Each additional room is charged at ₹100/room.</div>
+        <div id="vs-surcharge-note" style="display:none;margin-top:0.5rem;padding:0.5rem 0.75rem;background:#fef9ec;border-left:3px solid #f59e0b;border-radius:4px;font-size:0.78rem;color:#92400e;"></div>
+      </div>
+
+      <!-- SECTION 1: Room Photos -->
+      <div class="form-section">
+        <div class="form-section-title">📷 Upload Room Photos <span style="font-size:0.75rem;font-weight:400;color:var(--gray-500);">Label each space — pilot stages each one separately</span></div>
+        <div style="display:grid;grid-template-columns:160px 1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.35rem;padding:0 0.1rem;">
+          <div style="font-size:0.7rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;">Room</div>
+          <div style="font-size:0.7rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;">📷 POV A — Main angle</div>
+          <div style="font-size:0.7rem;font-weight:700;color:#f59e0b;text-transform:uppercase;">📐 POV B — Second angle <span style="font-weight:400;color:var(--gray-400);">optional</span></div>
+          <div style="font-size:0.7rem;font-weight:700;color:#6366f1;text-transform:uppercase;">🎨 Moodboard <span style="font-weight:400;color:var(--gray-400);">optional</span></div>
+        </div>
+        <div id="vs-photo-rows">
+          <div class="vs-photo-row" style="display:grid;grid-template-columns:160px 1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.6rem;align-items:start;">
+            <select name="room_labels[]" class="form-control" style="margin-top:0;" required>
+              <option>Living Room</option>
+              <option>Living + Dining (Combined)</option>
+              <option>Dining Area</option>
+              <option>Kitchen</option>
+              <option>Master Bedroom</option>
+              <option>Master Bathroom</option>
+              <option>Bedroom 2</option>
+              <option>Bedroom 3</option>
+              <option>Bedroom 4</option>
+              <option>Bathroom</option>
+              <option>Balcony</option>
+              <option>Terrace</option>
+              <option>Study / Home Office</option>
+              <option>Lobby / Entrance</option>
+              <option>Exterior / Facade</option>
+              <option>Amenity (Pool / Gym)</option>
+              <option>Other</option>
+            </select>
+            <div class="upload-box" style="margin:0;" id="box-vs-p0a">
+              <input type="file" name="room_photos[]" accept="image/*" onchange="showFile(this,'box-vs-p0a')" required>
+              <div class="upload-icon" style="font-size:0.9rem;margin:0;">📷</div>
+              <div class="upload-label" style="font-size:0.75rem;">Upload</div>
+              <div class="file-shown" style="font-size:0.68rem;"></div>
+            </div>
+            <div class="upload-box" style="margin:0;border-style:dashed;border-color:#f59e0b;background:#fffbeb;" id="box-vs-p0b">
+              <input type="file" name="room_photos_b[]" accept="image/*" onchange="showFile(this,'box-vs-p0b')">
+              <div class="upload-icon" style="font-size:0.9rem;margin:0;">📐</div>
+              <div class="upload-label" style="font-size:0.75rem;color:#92400e;">Upload (optional)</div>
+              <div class="file-shown" style="font-size:0.68rem;"></div>
+            </div>
+            <div class="upload-box" style="margin:0;border-style:dashed;border-color:#6366f1;background:#f5f3ff;" id="box-vs-mood0">
+              <input type="file" name="room_moodboards[]" accept="image/*,.pdf" onchange="showFile(this,'box-vs-mood0')">
+              <div class="upload-icon" style="font-size:0.9rem;margin:0;">🎨</div>
+              <div class="upload-label" style="font-size:0.75rem;color:#4f46e5;">Upload Moodboard (optional)</div>
+              <div class="file-shown" style="font-size:0.68rem;"></div>
+            </div>
+          </div>
+        </div>
+        <button type="button" onclick="addVsPhotoRow()" style="font-size:0.8rem;color:var(--navy);border:1px dashed var(--gray-300);background:none;padding:0.4rem 1rem;border-radius:20px;cursor:pointer;margin-top:0.25rem;">+ Add another room</button>
+        <div style="font-size:0.72rem;color:var(--gray-400);margin-top:0.6rem;">💡 POV B (second angle of same room) helps the AI understand geometry — <strong style="color:#92400e;">strongly recommended for under-construction / shell spaces.</strong></div>
+      </div>
+
+      <!-- SECTION 2: Moodboard -->
+      <div class="form-section">
+        <div class="form-section-title">🎨 Global Style Reference <span style="font-size:0.75rem;font-weight:400;color:var(--gray-500);">Optional — global fallback moodboard</span></div>
+        <div class="upload-box" id="box-vs-mood">
+          <input type="file" name="moodboard_file" accept="image/*,.pdf" onchange="showFile(this,'box-vs-mood')">
+          <div class="upload-icon">🎨</div>
+          <div class="upload-label">Upload Moodboard</div>
+          <div class="upload-hint">Pinterest board screenshot, magazine clipping, or reference image</div>
+          <div class="file-shown"></div>
+        </div>
+      </div>
+
+      <!-- SECTION 3: Property Details -->
+      <div class="form-section">
+        <div class="form-section-title">🏢 Property Details</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Property Type</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="property_type" value="Residential" id="vs-pt1" checked><label for="vs-pt1">Residential</label></div>
+              <div class="chip"><input type="radio" name="property_type" value="Office" id="vs-pt2"><label for="vs-pt2">Office</label></div>
+              <div class="chip"><input type="radio" name="property_type" value="Restaurant / Café" id="vs-pt3"><label for="vs-pt3">Restaurant</label></div>
+              <div class="chip"><input type="radio" name="property_type" value="Hotel Room" id="vs-pt4"><label for="vs-pt4">Hotel</label></div>
+              <div class="chip"><input type="radio" name="property_type" value="Retail Store" id="vs-pt5"><label for="vs-pt5">Retail</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Property Stage</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="property_stage" value="Finished" id="vs-ps1" checked><label for="vs-ps1">Finished / Ready</label></div>
+              <div class="chip"><input type="radio" name="property_stage" value="Under Construction" id="vs-ps2"><label for="vs-ps2">Under Construction</label></div>
+              <div class="chip"><input type="radio" name="property_stage" value="Shell / Bare Concrete" id="vs-ps3"><label for="vs-ps3">Shell / Bare Concrete</label></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 4: Staging Preferences -->
+      <div class="form-section">
+        <div class="form-section-title">🛋️ Staging Preferences</div>
+        <div class="form-group">
+          <label class="form-label">Design Style</label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="style" value="Modern Luxury" id="vs-s1"><label for="vs-s1">Modern Luxury</label></div>
+            <div class="chip"><input type="radio" name="style" value="Warm Contemporary" id="vs-s2" checked><label for="vs-s2">Warm Contemporary</label></div>
+            <div class="chip"><input type="radio" name="style" value="Minimalist" id="vs-s3"><label for="vs-s3">Minimalist</label></div>
+            <div class="chip"><input type="radio" name="style" value="Traditional Indian" id="vs-s4"><label for="vs-s4">Traditional Indian</label></div>
+            <div class="chip"><input type="radio" name="style" value="Scandinavian" id="vs-s5"><label for="vs-s5">Scandinavian</label></div>
+            <div class="chip"><input type="radio" name="style" value="Bohemian" id="vs-s6"><label for="vs-s6">Bohemian</label></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Target Buyer</label>
+            <div class="chips" style="flex-wrap:wrap;gap:0.5rem;">
+              <div class="chip"><input type="radio" name="buyer_profile" value="HNI" id="vs-b1"><label for="vs-b1">HNI</label></div>
+              <div class="chip"><input type="radio" name="buyer_profile" value="HNI COUPLE" id="vs-b2"><label for="vs-b2">HNI Couple</label></div>
+              <div class="chip"><input type="radio" name="buyer_profile" value="Young Professional" id="vs-b3"><label for="vs-b3">Young Professional</label></div>
+              <div class="chip"><input type="radio" name="buyer_profile" value="Family" id="vs-b4" checked><label for="vs-b4">Family</label></div>
+              <div class="chip"><input type="radio" name="buyer_profile" value="Investor" id="vs-b5"><label for="vs-b5">Investor</label></div>
+              <div class="chip"><input type="radio" name="buyer_profile" value="NRI" id="vs-b6"><label for="vs-b6">NRI</label></div>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Special Notes <span style="font-size:0.72rem;color:var(--gray-400);">Optional</span></label>
+            <input type="text" name="special_notes" class="form-control" placeholder="e.g. Put LED in front of bed, prefer dark wood, no TV on wall">
+          </div>
+        </div>
+      </div>
+
+      <div class="price-card">
+        <div class="price-amount" id="vs-price-display">₹799</div>
+        <div class="price-breakdown" id="vs-price-breakdown">Flat rate · up to 4 rooms staged · one render per room</div>
+        <div class="price-sla">⏱ Delivered within 3–5 hours of assignment</div>
+      </div>
+    </div>
+
+    <!-- ═══ PROPERTY REEL ═══ -->
+    <div class="sku-form" id="form-property_reel">
+      <!-- SECTION 1: Reel Tier -->
+      <div class="form-section">
+        <div class="form-section-title">🎬 Choose Your Reel</div>
+        <div class="chips" style="flex-wrap:wrap;gap:0.75rem;">
+          <div class="chip" style="flex:1;min-width:180px;">
+            <input type="radio" name="reel_tier" value="hook" id="pr-tier-hook" checked>
+            <label for="pr-tier-hook" style="display:block;padding:0.75rem 1rem;">
+              <div style="font-weight:600;font-size:0.95rem;">Hook Reel</div>
+              <div style="font-size:0.75rem;color:var(--gray-500);margin-top:0.2rem;">~8 sec · 2 Frames · WhatsApp / Stories teaser</div>
+              <div style="font-weight:700;color:var(--navy);margin-top:0.3rem;">₹999</div>
+            </label>
+          </div>
+          <div class="chip" style="flex:1;min-width:180px;">
+            <input type="radio" name="reel_tier" value="standard" id="pr-tier-standard">
+            <label for="pr-tier-standard" style="display:block;padding:0.75rem 1rem;">
+              <div style="font-weight:600;font-size:0.95rem;">Standard Reel</div>
+              <div style="font-size:0.75rem;color:var(--gray-500);margin-top:0.2rem;">~30 sec · up to 5 Frames · full walkthrough</div>
+              <div style="font-weight:700;color:var(--navy);margin-top:0.3rem;">₹1,599</div>
+            </label>
+          </div>
+          <div class="chip" style="flex:1;min-width:180px;">
+            <input type="radio" name="reel_tier" value="showcase" id="pr-tier-showcase">
+            <label for="pr-tier-showcase" style="display:block;padding:0.75rem 1rem;">
+              <div style="font-weight:600;font-size:0.95rem;">Showcase Reel</div>
+              <div style="font-size:0.75rem;color:var(--gray-500);margin-top:0.2rem;">~60 sec · up to 10 Frames · luxury listing quality</div>
+              <div style="font-weight:700;color:var(--navy);margin-top:0.3rem;">₹2,499</div>
+            </label>
+          </div>
+        </div>
+        <div id="pr-showcase-note" style="display:none;margin-top:0.6rem;padding:0.5rem 0.75rem;background:#fef9ec;border-left:3px solid #f59e0b;border-radius:4px;font-size:0.78rem;color:#92400e;">
+          ⚡ Showcase Reel: pilot will use Google Flow (Veo 3.1) for premium per-clip generation.
+        </div>
+      </div>
+
+      <!-- SECTION 2: Property Photos -->
+      <div class="form-section">
+        <div class="form-section-title">📷 Upload Property Photos <span style="font-size:0.75rem;font-weight:400;color:var(--gray-500);">Label each area — pilot uses these to sequence the reel</span></div>
+        <div style="display:grid;grid-template-columns:160px 1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.35rem;padding:0 0.1rem;">
+          <div style="font-size:0.7rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;">Area</div>
+          <div style="font-size:0.7rem;font-weight:700;color:var(--gray-500);text-transform:uppercase;">📷 POV A — Main angle</div>
+          <div style="font-size:0.7rem;font-weight:700;color:#f59e0b;text-transform:uppercase;">📐 POV B — Second angle <span style="font-weight:400;color:var(--gray-400);">optional</span></div>
+          <div style="font-size:0.7rem;font-weight:700;color:#6366f1;text-transform:uppercase;">🎨 Moodboard <span style="font-weight:400;color:var(--gray-400);">optional</span></div>
+        </div>
+        <div id="pr-photo-rows">
+          <div class="pr-photo-row" style="display:grid;grid-template-columns:160px 1fr 1fr 1fr;gap:0.5rem;margin-bottom:0.6rem;align-items:start;">
+            <select name="property_photos_label[]" class="form-control" style="margin-top:0;">
+              <option>Exterior / Facade</option>
+              <option>Living Room</option>
+              <option>Living + Dining (Combined)</option>
+              <option>Dining Area</option>
+              <option>Kitchen</option>
+              <option>Master Bedroom</option>
+              <option>Master Bathroom</option>
+              <option>Bedroom 2</option>
+              <option>Bedroom 3</option>
+              <option>Bedroom 4</option>
+              <option>Bathroom</option>
+              <option>Balcony</option>
+              <option>Terrace</option>
+              <option>Study / Home Office</option>
+              <option>Lobby / Entrance</option>
+              <option>Amenity (Pool / Gym / Clubhouse)</option>
+              <option>Other</option>
+            </select>
+            <div class="upload-box" style="margin:0;" id="box-pr-p0a">
+              <input type="file" name="property_photos" accept="image/*" onchange="showFile(this,'box-pr-p0a')">
+              <div class="upload-icon" style="font-size:0.9rem;margin:0;">📷</div>
+              <div class="upload-label" style="font-size:0.75rem;">Upload</div>
+              <div class="file-shown" style="font-size:0.68rem;"></div>
+            </div>
+            <div class="upload-box" style="margin:0;border-style:dashed;border-color:#f59e0b;background:#fffbeb;" id="box-pr-p0b">
+              <input type="file" name="property_photos_b" accept="image/*" onchange="showFile(this,'box-pr-p0b')">
+              <div class="upload-icon" style="font-size:0.9rem;margin:0;">📐</div>
+              <div class="upload-label" style="font-size:0.75rem;color:#92400e;">Upload (optional)</div>
+              <div class="file-shown" style="font-size:0.68rem;"></div>
+            </div>
+            <div class="upload-box" style="margin:0;border-style:dashed;border-color:#6366f1;background:#f5f3ff;" id="box-pr-mood0">
+              <input type="file" name="property_moodboards" accept="image/*,.pdf" onchange="showFile(this,'box-pr-mood0')">
+              <div class="upload-icon" style="font-size:0.9rem;margin:0;">🎨</div>
+              <div class="upload-label" style="font-size:0.75rem;color:#4f46e5;">Upload Moodboard (optional)</div>
+              <div class="file-shown" style="font-size:0.68rem;"></div>
+            </div>
+          </div>
+        </div>
+        <button type="button" onclick="addPrPhotoRow()" style="font-size:0.8rem;color:var(--navy);border:1px dashed var(--gray-300);background:none;padding:0.4rem 1rem;border-radius:20px;cursor:pointer;margin-top:0.25rem;">+ Add another area</button>
+        <div id="pr-photo-tip" style="font-size:0.72rem;color:var(--gray-400);margin-top:0.5rem;">Hook needs 5 photos · Standard 8–12 · Showcase 12–16. Label each accurately. 💡 POV B helps AI understand room geometry — <strong style="color:#92400e;">recommended for empty / shell properties.</strong></div>
+      </div>
+
+      <!-- SECTION 3: Property Details -->
+      <div class="form-section">
+        <div class="form-section-title">🏠 Property Details</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Property Name (if any)</label>
+            <input type="text" name="property_name" class="form-control" placeholder="e.g. Sunrise Heights, The Meadows">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location <span class="required">*</span></label>
+            <input type="text" name="location" class="form-control" placeholder="e.g. Sector 62, Noida" required>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Property Size</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="bhk_size" value="1BHK" id="pr-bhk1"><label for="pr-bhk1">1 BHK</label></div>
+              <div class="chip"><input type="radio" name="bhk_size" value="2BHK" id="pr-bhk2" checked><label for="pr-bhk2">2 BHK</label></div>
+              <div class="chip"><input type="radio" name="bhk_size" value="3BHK" id="pr-bhk3"><label for="pr-bhk3">3 BHK</label></div>
+              <div class="chip"><input type="radio" name="bhk_size" value="4BHK" id="pr-bhk4"><label for="pr-bhk4">4 BHK</label></div>
+              <div class="chip"><input type="radio" name="bhk_size" value="Villa" id="pr-bhk5"><label for="pr-bhk5">Villa</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Property Type</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="property_type" value="Residential" id="pr-pt1" checked><label for="pr-pt1">Residential</label></div>
+              <div class="chip"><input type="radio" name="property_type" value="Office" id="pr-pt2"><label for="pr-pt2">Office</label></div>
+              <div class="chip"><input type="radio" name="property_type" value="Restaurant / Café" id="pr-pt3"><label for="pr-pt3">Restaurant</label></div>
+              <div class="chip"><input type="radio" name="property_type" value="Hotel Room" id="pr-pt4"><label for="pr-pt4">Hotel</label></div>
+              <div class="chip"><input type="radio" name="property_type" value="Retail Store" id="pr-pt5"><label for="pr-pt5">Retail</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Key Selling Points <span class="required">*</span></label>
+          <textarea name="selling_points" class="form-control" rows="2" placeholder="e.g. 1250 sqft, Ready to move, Near metro, Sea view, Price on request" required></textarea>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Contact Name (end frame) <span class="required">*</span></label>
+            <input type="text" name="contact_name" class="form-control" placeholder="Your name or agency name" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact Number <span class="required">*</span></label>
+            <input type="text" name="contact_number" class="form-control" placeholder="+91 98765 43210" required>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Tone</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="tone" value="Luxury" id="pr-t1"><label for="pr-t1">Luxury</label></div>
+              <div class="chip"><input type="radio" name="tone" value="Affordable" id="pr-t2"><label for="pr-t2">Affordable</label></div>
+              <div class="chip"><input type="radio" name="tone" value="Family" id="pr-t3" checked><label for="pr-t3">Family</label></div>
+              <div class="chip"><input type="radio" name="tone" value="Investment" id="pr-t4"><label for="pr-t4">Investment</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Background Music</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="music" value="soft" id="pr-m1" checked><label for="pr-m1">Soft / Ambient</label></div>
+              <div class="chip"><input type="radio" name="music" value="energetic" id="pr-m2"><label for="pr-m2">Energetic</label></div>
+              <div class="chip"><input type="radio" name="music" value="none" id="pr-m3"><label for="pr-m3">No Music</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Voiceover / Text Overlay</label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="voiceover" value="yes" id="pr-v1"><label for="pr-v1">Yes (text overlay)</label></div>
+            <div class="chip"><input type="radio" name="voiceover" value="no" id="pr-v2" checked><label for="pr-v2">No — visuals only</label></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 4: Property Condition & Style (feeds AI prompt quality) -->
+      <div class="form-section">
+        <div class="form-section-title">🎨 Property Condition &amp; Style <span style="font-size:0.75rem;font-weight:400;color:var(--gray-500);">Used to build accurate AI prompts — answer honestly</span></div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Furnished Status <span class="required">*</span></label>
+            <div class="chips" style="flex-wrap:wrap;gap:0.5rem;">
+              <div class="chip"><input type="radio" name="furnished_status" value="Fully Furnished" id="pr-fs1" checked><label for="pr-fs1">Fully Furnished</label></div>
+              <div class="chip"><input type="radio" name="furnished_status" value="Semi-Furnished" id="pr-fs2"><label for="pr-fs2">Semi-Furnished</label></div>
+              <div class="chip"><input type="radio" name="furnished_status" value="Unfurnished" id="pr-fs3"><label for="pr-fs3">Unfurnished</label></div>
+              <div class="chip"><input type="radio" name="furnished_status" value="Shell/Under Construction" id="pr-fs4"><label for="pr-fs4">Shell / UC</label></div>
+            </div>
+            <div style="font-size:0.72rem;color:var(--gray-400);margin-top:0.3rem;">Affects AI video style — unfurnished properties get architectural treatment, not interior decor treatment</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Interior Style</label>
+            <div class="chips" style="flex-wrap:wrap;gap:0.5rem;">
+              <div class="chip"><input type="radio" name="interior_style" value="Modern/Contemporary" id="pr-is1" checked><label for="pr-is1">Modern</label></div>
+              <div class="chip"><input type="radio" name="interior_style" value="Minimalist" id="pr-is2"><label for="pr-is2">Minimalist</label></div>
+              <div class="chip"><input type="radio" name="interior_style" value="Traditional/Classic" id="pr-is3"><label for="pr-is3">Traditional</label></div>
+              <div class="chip"><input type="radio" name="interior_style" value="Industrial" id="pr-is4"><label for="pr-is4">Industrial</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Listing Price Range</label>
+            <div class="chips" style="flex-wrap:wrap;gap:0.5rem;">
+              <div class="chip"><input type="radio" name="price_bracket" value="Under ₹50L" id="pr-pb1"><label for="pr-pb1">Under ₹50L</label></div>
+              <div class="chip"><input type="radio" name="price_bracket" value="₹50L–1Cr" id="pr-pb2" checked><label for="pr-pb2">₹50L–1Cr</label></div>
+              <div class="chip"><input type="radio" name="price_bracket" value="₹1–3Cr" id="pr-pb3"><label for="pr-pb3">₹1–3Cr</label></div>
+              <div class="chip"><input type="radio" name="price_bracket" value="₹3Cr+" id="pr-pb4"><label for="pr-pb4">₹3Cr+</label></div>
+              <div class="chip"><input type="radio" name="price_bracket" value="Commercial" id="pr-pb5"><label for="pr-pb5">Commercial</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Special Instructions <span style="font-weight:400;color:var(--gray-500)">(optional)</span></label>
+            <input type="text" name="special_note" class="form-control" placeholder="e.g. Ignore damaged ceiling, focus on sea view, avoid kitchen corner">
+          </div>
+        </div>
+      </div>
+
+      <!-- platform hidden — pilot selects their tool in the pilot dashboard -->
+      <input type="hidden" name="platform" value="kling">
+
+      <div class="price-card">
+        <div class="price-amount" id="pr-price-display">₹999</div>
+        <div class="price-breakdown" id="pr-price-breakdown">Hook Reel · ~8 sec · 2 Frames · 9:16 for WhatsApp / Instagram</div>
+        <div class="price-sla">⏱ Delivered within 3–5 hours of assignment</div>
+      </div>
+    </div>
+
+    <!-- ═══ PROPERTY SOCIAL CARD PACK ═══ -->
+    <div class="sku-form" id="form-property_social_card">
+      <div class="form-section">
+        <div class="form-section-title">📸 Property Photo <span style="font-size:0.75rem;font-weight:400;color:var(--gray-500);">Best exterior or key interior — used as hero image</span></div>
+        <div class="upload-box" id="box-psc-photo">
+          <input type="file" name="property_photo" accept="image/*" onchange="showFile(this,'box-psc-photo','psc-photo-name')">
+          <div class="upload-icon">🏠</div>
+          <div class="upload-label">Upload Hero Property Photo</div>
+          <div class="upload-hint">JPG or PNG — best quality available</div>
+          <div class="file-shown" id="psc-photo-name"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">🏠 Property Information</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Property Name / Type <span class="required">*</span></label>
+            <input type="text" name="property_name" class="form-control" placeholder="e.g. 3BHK Apartment, Sunrise Villa" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location <span class="required">*</span></label>
+            <input type="text" name="location" class="form-control" placeholder="e.g. Bandra West, Mumbai" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">3 Key Highlights <span class="required">*</span></label>
+          <textarea name="highlights" class="form-control" rows="2" placeholder="e.g. Sea view from balcony · 2 min from metro · Ready to move in" required></textarea>
+          <div style="font-size:0.72rem;color:var(--gray-400);margin-top:0.25rem;">These appear as the 3 bullet points on both cards.</div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Asking Price <span class="required">*</span></label>
+            <input type="text" name="asking_price" class="form-control" placeholder="e.g. ₹1.85 Cr · Price on request" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact Number (on card) <span class="required">*</span></label>
+            <input type="text" name="contact_number" class="form-control" placeholder="+91 98765 43210" required>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Contact Name</label>
+          <input type="text" name="contact_name" class="form-control" placeholder="Your name or agency name">
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">🎨 Brand / Style</div>
+        <div class="grid-2">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Card Style</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="card_style" value="Modern" id="psc-cs1" checked><label for="psc-cs1">Modern</label></div>
+              <div class="chip"><input type="radio" name="card_style" value="Luxury" id="psc-cs2"><label for="psc-cs2">Luxury</label></div>
+              <div class="chip"><input type="radio" name="card_style" value="Minimal" id="psc-cs3"><label for="psc-cs3">Minimal</label></div>
+              <div class="chip"><input type="radio" name="card_style" value="Bold" id="psc-cs4"><label for="psc-cs4">Bold / Colourful</label></div>
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Brand Colours <span style="font-size:0.72rem;color:var(--gray-400);">Optional</span></label>
+            <input type="text" name="brand_colors" class="form-control" placeholder="e.g. Navy #1A3A5C · Gold #F5A623">
+          </div>
+        </div>
+        <div class="upload-box" id="box-psc-logo" style="margin-top:1rem;">
+          <input type="file" name="logo_file" accept="image/*,.svg" onchange="showFile(this,'box-psc-logo','psc-logo-name')">
+          <div class="upload-icon">🏷️</div>
+          <div class="upload-label">Logo (Optional)</div>
+          <div class="upload-hint">PNG or SVG with transparent background</div>
+          <div class="file-shown" id="psc-logo-name"></div>
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-amount">₹499</div>
+        <div class="price-breakdown">Flat rate · 2 assets delivered: 1:1 Square (WhatsApp Card & Instagram Post) + 9:16 Vertical (WhatsApp & Instagram Story)</div>
+        <div class="price-sla">⏱ Delivered within 1–under 4 hours of assignment</div>
+      </div>
+    </div>
+
+    <!-- ═══ BACKGROUND CLEANUP ═══ -->
+    <div class="sku-form" id="form-bg_cleanup">
+      <div class="form-section">
+        <div class="form-section-title">📦 Upload Product Images</div>
+        <div class="upload-box" id="box-bg-photos">
+          <input type="file" name="product_photos" accept="image/*" multiple onchange="showMultiFile(this,'box-bg-photos','bg-file-list')">
+          <div class="upload-icon">📦</div>
+          <div class="upload-label">Upload Product Photos (min 5)</div>
+          <div class="upload-hint">JPG or PNG — any background, any angle</div>
+          <div class="multi-file-list" id="bg-file-list"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">🎨 Output Preferences</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Background</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="background_type" value="white" id="bg-b1" checked><label for="bg-b1">Pure White</label></div>
+              <div class="chip"><input type="radio" name="background_type" value="light grey" id="bg-b2"><label for="bg-b2">Light Grey</label></div>
+              <div class="chip"><input type="radio" name="background_type" value="transparent" id="bg-b3"><label for="bg-b3">Transparent PNG</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Shadow</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="shadow" value="none" id="bg-s1" checked><label for="bg-s1">No Shadow</label></div>
+              <div class="chip"><input type="radio" name="shadow" value="natural" id="bg-s2"><label for="bg-s2">Natural Shadow</label></div>
+              <div class="chip"><input type="radio" name="shadow" value="drop" id="bg-s3"><label for="bg-s3">Drop Shadow</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Output Format</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="output_format" value="JPG" id="bg-f1"><label for="bg-f1">JPG</label></div>
+              <div class="chip"><input type="radio" name="output_format" value="PNG" id="bg-f2" checked><label for="bg-f2">PNG</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Final Use</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="final_use" value="Amazon / Flipkart" id="bg-u1" checked><label for="bg-u1">Amazon / Flipkart</label></div>
+              <div class="chip"><input type="radio" name="final_use" value="Website" id="bg-u2"><label for="bg-u2">Website</label></div>
+              <div class="chip"><input type="radio" name="final_use" value="Print" id="bg-u3"><label for="bg-u3">Print</label></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">📝 Special Instructions <span style="font-size:0.75rem;font-weight:400;color:var(--gray-500);">Optional</span></div>
+        <div class="form-group" style="margin-bottom:0;">
+          <textarea name="special_instructions" class="form-control" rows="2" placeholder="e.g. Product has reflective surface — be careful with edges. Keep label text sharp. Preserve all fine detail on cap."></textarea>
+          <div style="font-size:0.72rem;color:var(--gray-400);margin-top:0.3rem;">💡 Amazon/Flipkart output will be delivered at 2000×2000px. Website at 1200×1200px. Print at 300 DPI.</div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">🔢 Number of Images</div>
+        <div class="qty-row">
+          <button type="button" class="qty-btn" onclick="changeQty(-1,'bg_cleanup',5)">−</button>
+          <div class="qty-val" id="qty-bg_cleanup">5</div>
+          <button type="button" class="qty-btn" onclick="changeQty(1,'bg_cleanup',5)">+</button>
+          <span style="font-size:0.875rem;color:var(--gray-500);">images · ₹79 each · min 5</span>
+        </div>
+        <input type="hidden" name="image_count" id="count-bg_cleanup" value="5">
+        <div class="price-card">
+          <div class="price-amount" id="pamt-bg_cleanup">₹395</div>
+          <div class="price-breakdown" id="pbrk-bg_cleanup">₹79 × 5 images</div>
+          <div class="price-sla">⏱ Delivered within 1 hour of assignment</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PRODUCT LISTING ═══ -->
+    <div class="sku-form" id="form-product_listing">
+      <div class="form-section">
+        <div class="form-section-title">📦 Product Details</div>
+        <div class="upload-box" id="box-pl-photo" style="margin-bottom:1rem;">
+          <input type="file" name="product_photo" accept="image/*" onchange="showFile(this,'box-pl-photo')">
+          <div class="upload-icon">📷</div>
+          <div class="upload-label">Upload Product Photo</div>
+          <div class="upload-hint">JPG or PNG — any angle</div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Product Name <span class="required">*</span></label>
+            <input type="text" name="product_name" class="form-control" placeholder="e.g. BRF Stainless Steel Water Bottle" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand Name</label>
+            <input type="text" name="brand_name" class="form-control" placeholder="e.g. BRF, Generic, Private Label">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <input type="text" name="category" class="form-control" placeholder="e.g. Kitchen & Dining, Sports, Beauty">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Price Point</label>
+            <input type="text" name="price_point" class="form-control" placeholder="e.g. ₹499">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Key Features (5–10 points) <span class="required">*</span></label>
+          <textarea name="key_features" class="form-control" rows="3" placeholder="List each feature on a new line:&#10;1000ml capacity&#10;BPA-free stainless steel&#10;Keeps cold 24 hrs / hot 12 hrs&#10;Leak-proof lid" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Specifications (dimensions, weight, colours, variants)</label>
+          <textarea name="specifications" class="form-control" rows="2" placeholder="e.g. 280mm tall, 500g, Available in Black / Silver / Red, Pack of 1"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Buyer</label>
+          <input type="text" name="target_buyer" class="form-control" placeholder="e.g. Office-goers, gym enthusiasts, students">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Platforms</label>
+            <div class="check-chips">
+              <div class="check-chip"><input type="checkbox" name="platform[]" value="Amazon" id="pll-p1" checked><label for="pll-p1">Amazon</label></div>
+              <div class="check-chip"><input type="checkbox" name="platform[]" value="Flipkart" id="pll-p2"><label for="pll-p2">Flipkart</label></div>
+              <div class="check-chip"><input type="checkbox" name="platform[]" value="Meesho" id="pll-p3"><label for="pll-p3">Meesho</label></div>
+              <div class="check-chip"><input type="checkbox" name="platform[]" value="D2C Website" id="pll-p4" onchange="document.getElementById('d2c-url-group').style.display=this.checked?'block':'none'"><label for="pll-p4">D2C Site</label></div>
+            </div>
+            <div class="form-group" id="d2c-url-group" style="display:none; margin-top:1rem;">
+              <label class="form-label">D2C Website URL</label>
+              <input type="text" name="d2c_website_url" class="form-control" placeholder="e.g. www.yourbrand.com">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Primary Keyword (optional)</label>
+            <input type="text" name="primary_keyword" class="form-control" placeholder="e.g. stainless steel water bottle insulated">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">New listing or updating existing?</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="listing_type" value="new" id="pll-lt1" checked><label for="pll-lt1">New Listing</label></div>
+              <div class="chip"><input type="radio" name="listing_type" value="update" id="pll-lt2"><label for="pll-lt2">Updating Existing</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Competitor Product URL <span style="font-size:0.72rem;color:var(--gray-400);">Optional — helps us benchmark</span></label>
+            <input type="text" name="competitor_url" class="form-control" placeholder="e.g. amazon.in/dp/B0XXXXXXX">
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">🔢 Number of Products</div>
+        <div class="qty-row">
+          <button type="button" class="qty-btn" onclick="changeQty(-1,'product_listing',1)">−</button>
+          <div class="qty-val" id="qty-product_listing">1</div>
+          <button type="button" class="qty-btn" onclick="changeQty(1,'product_listing',1)">+</button>
+          <span style="font-size:0.875rem;color:var(--gray-500);">products · ₹199 each</span>
+        </div>
+        <input type="hidden" name="product_count" id="count-product_listing" value="1">
+        <div class="price-card">
+          <div class="price-amount" id="pamt-product_listing">₹199</div>
+          <div class="price-breakdown" id="pbrk-product_listing">₹199 × 1 product</div>
+          <div class="price-sla">⏱ Delivered within 1–under 4 hours of assignment</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PRODUCT MOCKUP ═══ -->
+    <div class="sku-form" id="form-product_mockup">
+      <div class="form-section">
+        <div class="form-section-title">📦 Upload Product Photo</div>
+        <div class="upload-box" id="box-pm-photos">
+          <input type="file" name="product_photos" accept="image/*" multiple onchange="showMultiFile(this,'box-pm-photos','pm-file-list')">
+          <div class="upload-icon">📦</div>
+          <div class="upload-label">Upload Product Photo(s)</div>
+          <div class="upload-hint">White background preferred but not required</div>
+          <div class="multi-file-list" id="pm-file-list"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">🌅 Scene Preferences</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Product Name <span class="required">*</span></label>
+            <input type="text" name="product_name" class="form-control" placeholder="e.g. BRF Water Bottle" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Product Description (one line)</label>
+            <input type="text" name="product_desc" class="form-control" placeholder="e.g. Insulated stainless steel water bottle">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Product Category <span class="required">*</span></label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="product_category" value="Skincare / Beauty" id="pm-cat1" required onchange="updatePMScenes(this.value)"><label for="pm-cat1">Skincare / Beauty</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Food & Beverage" id="pm-cat2" onchange="updatePMScenes(this.value)"><label for="pm-cat2">Food & Beverage</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Home Fragrance / Candles" id="pm-cat3" onchange="updatePMScenes(this.value)"><label for="pm-cat3">Home Fragrance / Candles</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Supplements / Wellness" id="pm-cat4" onchange="updatePMScenes(this.value)"><label for="pm-cat4">Supplements / Wellness</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Electronics / Gadgets" id="pm-cat5" onchange="updatePMScenes(this.value)"><label for="pm-cat5">Electronics / Gadgets</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Apparel / Accessories" id="pm-cat6" onchange="updatePMScenes(this.value)"><label for="pm-cat6">Apparel / Accessories</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Baby / Kids" id="pm-cat7" onchange="updatePMScenes(this.value)"><label for="pm-cat7">Baby / Kids</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Kitchen / Cookware" id="pm-cat8" onchange="updatePMScenes(this.value)"><label for="pm-cat8">Kitchen / Cookware</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Stationery / Office" id="pm-cat9" onchange="updatePMScenes(this.value)"><label for="pm-cat9">Stationery / Office</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Lighting / Lamps" id="pm-cat11" onchange="updatePMScenes(this.value)"><label for="pm-cat11">Lighting / Lamps</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Furniture / Home Décor" id="pm-cat12" onchange="updatePMScenes(this.value)"><label for="pm-cat12">Furniture / Home Décor</label></div>
+            <div class="chip"><input type="radio" name="product_category" value="Other" id="pm-cat10" onchange="updatePMScenes(this.value)"><label for="pm-cat10">Other</label></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Product URL <span style="font-size:0.72rem;color:var(--gray-400);">Optional — link to product on your website or Amazon listing</span></label>
+          <input type="url" name="product_url" class="form-control" placeholder="e.g. https://amazon.in/dp/B0XXXXXXX">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Scene / Setting</label>
+          <div id="pm-scene-chips" class="chips" style="min-height:36px;">
+            <span id="pm-scene-placeholder" style="font-size:0.8rem;color:#9CA3AF;padding:6px 0;">← Select a product category above to see scene options</span>
+          </div>
+          <!-- Hidden field that holds the final scene value submitted with the form -->
+          <input type="hidden" name="scene_setting" id="pm-scene-value">
+          <!-- Custom / freetext fallback -->
+          <div id="pm-scene-custom-wrap" style="display:none;margin-top:8px;">
+            <input type="text" id="pm-scene-custom-text" class="form-control" placeholder="Describe the scene / setting (e.g. Rooftop at sunset, Boho living room)..." oninput="document.getElementById('pm-scene-value').value=this.value">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mood</label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="mood" value="Cozy & Warm" id="pm-m1"><label for="pm-m1">Cozy & Warm</label></div>
+            <div class="chip"><input type="radio" name="mood" value="Energetic" id="pm-m2"><label for="pm-m2">Energetic</label></div>
+            <div class="chip"><input type="radio" name="mood" value="Minimal & Clean" id="pm-m3" checked><label for="pm-m3">Minimal & Clean</label></div>
+            <div class="chip"><input type="radio" name="mood" value="Luxury" id="pm-m4"><label for="pm-m4">Luxury</label></div>
+            <div class="chip"><input type="radio" name="mood" value="Playful" id="pm-m5"><label for="pm-m5">Playful</label></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Audience</label>
+          <input type="text" name="target_audience" class="form-control" placeholder="e.g. Young professionals, moms, fitness enthusiasts">
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Product Material & Finish <span style="font-size:0.72rem;color:var(--gray-400);">Helps AI preserve design accurately</span></label>
+            <input type="text" name="product_material" class="form-control" placeholder="e.g. Matte black ABS plastic, glossy silver stainless steel">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand Colours <span style="font-size:0.72rem;color:var(--gray-400);">Optional — scene will complement</span></label>
+            <input type="text" name="brand_colours" class="form-control" placeholder="e.g. Navy #1A3A5C and Gold #F5A623">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Output Ratio / Platform</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="output_ratio" value="1:1" id="pm-r1" checked><label for="pm-r1">1:1 Square (Amazon)</label></div>
+              <div class="chip"><input type="radio" name="output_ratio" value="4:5" id="pm-r2"><label for="pm-r2">4:5 Portrait (Instagram)</label></div>
+              <div class="chip"><input type="radio" name="output_ratio" value="9:16" id="pm-r3"><label for="pm-r3">9:16 Story/Reel</label></div>
+              <div class="chip"><input type="radio" name="output_ratio" value="16:9" id="pm-r4"><label for="pm-r4">16:9 Landscape (Banner)</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Elements to Avoid in Scene</label>
+            <input type="text" name="avoid_elements" class="form-control" placeholder="e.g. No alcohol, no competing brand products, no people">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Lighting Direction / Environment</label>
+            <input type="text" name="lighting_direction" class="form-control" placeholder="e.g. Studio overhead lighting, harsh midday sun from left">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label">Scale Reference</label>
+            <input type="text" name="scale_reference" class="form-control" placeholder="e.g. Product should look 10 inches tall next to a coffee cup">
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">🔢 Number of Mockups</div>
+        <div class="qty-row">
+          <button type="button" class="qty-btn" onclick="changeQty(-1,'product_mockup',1)">−</button>
+          <div class="qty-val" id="qty-product_mockup">1</div>
+          <button type="button" class="qty-btn" onclick="changeQty(1,'product_mockup',1)">+</button>
+          <span style="font-size:0.875rem;color:var(--gray-500);">mockups · ₹299 each</span>
+        </div>
+        <input type="hidden" name="mockup_count" id="count-product_mockup" value="1">
+        <div class="price-card">
+          <div class="price-amount" id="pamt-product_mockup">₹299</div>
+          <div class="price-breakdown" id="pbrk-product_mockup">₹299 × 1 mockup</div>
+          <div class="price-sla">⏱ Delivered within 1.5–2.5 hours of assignment</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ INSTAGRAM CAROUSEL ═══ -->
+    <div class="sku-form" id="form-instagram_carousel">
+
+      <!-- ── Section 1: Brand Basics ── -->
+      <div class="form-section">
+        <div class="form-section-title">🏷 Brand Basics</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Brand / Business Name <span class="required">*</span></label>
+            <input type="text" name="brand_name" class="form-control" placeholder="e.g. GlowUp Skincare" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Industry / Niche <span class="required">*</span></label>
+            <input type="text" name="industry_niche" class="form-control" placeholder="e.g. Clean Beauty, Real Estate, SaaS, Food & Beverage" required>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Business URL(s) <span class="required">*</span></label>
+          <textarea name="business_urls" class="form-control" rows="2" placeholder="Paste any URL where your business is listed — website, Instagram, Facebook, LinkedIn, JustDial, TradeIndia, etc." required></textarea>
+          <div style="font-size:0.75rem;color:var(--gray-500);margin-top:4px;">The pilot will study these pages to understand your brand before building the carousel.</div>
+        </div>
+      </div>
+
+      <!-- ── Section 2: Carousel Brief ── -->
+      <div class="form-section">
+        <div class="form-section-title">💡 Carousel Brief</div>
+
+        <div class="form-group">
+          <label class="form-label">Carousel Idea / Story <span class="required">*</span></label>
+          <textarea name="carousel_idea" id="ic-idea-text" class="form-control" rows="3" placeholder="Describe what story or idea you want this carousel to tell. e.g. Show how our new moisturiser works step-by-step · Launch our new summer collection with 5 product highlights · Explain 3 reasons our service saves time" required></textarea>
+          <div style="font-size:0.75rem;color:var(--gray-500);margin-top:6px;">Quick picks — click to fill:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+            <button type="button" class="chip-suggest-btn" onclick="document.getElementById('ic-idea-text').value='Describe a key service feature and why it matters to our audience'">Service Feature</button>
+            <button type="button" class="chip-suggest-btn" onclick="document.getElementById('ic-idea-text').value='Highlight a product feature with visuals for each benefit'">Product Feature</button>
+            <button type="button" class="chip-suggest-btn" onclick="document.getElementById('ic-idea-text').value='Announce a limited-time product offer or discount with urgency'">Product Offer</button>
+            <button type="button" class="chip-suggest-btn" onclick="document.getElementById('ic-idea-text').value='Launch a new product — build curiosity then reveal'">Product Launch</button>
+            <button type="button" class="chip-suggest-btn" onclick="document.getElementById('ic-idea-text').value='Announce a sale with compelling visuals and clear savings'">Sale</button>
+            <button type="button" class="chip-suggest-btn" onclick="document.getElementById('ic-idea-text').value='Show the product being used naturally in different real-life environments'">Product in Use</button>
+            <button type="button" class="chip-suggest-btn" onclick="document.getElementById('ic-idea-text').value='Tell our brand story — how we started, what we stand for, where we are going'">Brand Story</button>
+            <button type="button" class="chip-suggest-btn" onclick="document.getElementById('ic-idea-text').value='Walk the audience through a step-by-step tutorial or how-to guide'">How-To Tutorial</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Carousel Style <span class="required">*</span></label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="carousel_style" value="Text Based" id="ic-cs1" checked><label for="ic-cs1">Text Based</label></div>
+            <div class="chip"><input type="radio" name="carousel_style" value="Image Based" id="ic-cs2"><label for="ic-cs2">Image Based</label></div>
+            <div class="chip"><input type="radio" name="carousel_style" value="Infographics" id="ic-cs3"><label for="ic-cs3">Infographics</label></div>
+            <div class="chip"><input type="radio" name="carousel_style" value="Data Based" id="ic-cs4"><label for="ic-cs4">Data Based</label></div>
+            <div class="chip"><input type="radio" name="carousel_style" value="Realistic" id="ic-cs5"><label for="ic-cs5">Realistic</label></div>
+            <div class="chip"><input type="radio" name="carousel_style" value="Comical" id="ic-cs6"><label for="ic-cs6">Comical</label></div>
+            <div class="chip"><input type="radio" name="carousel_style" value="Futuristic" id="ic-cs7"><label for="ic-cs7">Futuristic</label></div>
+            <div class="chip"><input type="radio" name="carousel_style" value="Bold Typography" id="ic-cs8"><label for="ic-cs8">Bold Typography</label></div>
+            <div class="chip"><input type="radio" name="carousel_style" value="Minimal" id="ic-cs9"><label for="ic-cs9">Minimal</label></div>
+            <div class="chip"><input type="radio" name="carousel_style" value="Tutorial / How-To" id="ic-cs10"><label for="ic-cs10">Tutorial / How-To</label></div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Number of Slides</label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="num_slides" value="5" id="ic-ns1" checked><label for="ic-ns1">5 slides</label></div>
+            <div class="chip"><input type="radio" name="num_slides" value="6" id="ic-ns2"><label for="ic-ns2">6 slides</label></div>
+            <div class="chip"><input type="radio" name="num_slides" value="8" id="ic-ns3"><label for="ic-ns3">8 slides</label></div>
+            <div class="chip"><input type="radio" name="num_slides" value="10" id="ic-ns4"><label for="ic-ns4">10 slides</label></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Section 2: Campaign Brief ── -->
+      <div class="form-section">
+        <div class="form-section-title">🎯 Campaign Brief</div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Product / Service Being Promoted <span class="required">*</span></label>
+            <input type="text" name="product_service" class="form-control" placeholder="e.g. Vitamin C Serum, Email Marketing Package, Coaching Programme" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Unique Selling Point (USP)</label>
+            <input type="text" name="usp" class="form-control" placeholder="e.g. No harsh chemicals, results in 7 days">
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Target Audience <span class="required">*</span></label>
+            <input type="text" name="target_audience" class="form-control" placeholder="e.g. Women 22–40 into clean beauty, SMB founders in India" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Audience Pain Point</label>
+            <input type="text" name="pain_point" class="form-control" placeholder="e.g. Dull, uneven skin tone · Can't get clients online">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Goal of This Carousel <span class="required">*</span></label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="goal" value="Drive Sales" id="ic-gl1" checked><label for="ic-gl1">Drive Sales</label></div>
+            <div class="chip"><input type="radio" name="goal" value="Build Awareness" id="ic-gl2"><label for="ic-gl2">Build Awareness</label></div>
+            <div class="chip"><input type="radio" name="goal" value="Get Leads" id="ic-gl3"><label for="ic-gl3">Get Leads</label></div>
+            <div class="chip"><input type="radio" name="goal" value="Grow Following" id="ic-gl4"><label for="ic-gl4">Grow Following</label></div>
+            <div class="chip"><input type="radio" name="goal" value="Educate Audience" id="ic-gl5"><label for="ic-gl5">Educate</label></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Key Message <span class="required">*</span></label>
+          <input type="text" name="key_message" class="form-control" placeholder="e.g. Brighter skin in 7 days — naturally · 3 steps to close more clients" required>
+          <div style="font-size:0.75rem;color:var(--gray-500);margin-top:4px;">The single message you want this carousel to leave with the reader</div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Offer / CTA <span class="required">*</span></label>
+            <input type="text" name="cta_text" class="form-control" placeholder="e.g. 20% off first order — link in bio · Book a free call today" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">CTA Button Text <span style="font-size:0.78rem;font-weight:400;color:var(--gray-500);">(max 4 words)</span></label>
+            <input type="text" name="cta_button_text" class="form-control" placeholder="e.g. Shop Now · Book Free Call · Grab the Deal">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Stage of Awareness</label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="audience_stage" value="Cold" id="ic-as1" checked><label for="ic-as1">Cold Audience</label></div>
+            <div class="chip"><input type="radio" name="audience_stage" value="Warm" id="ic-as2"><label for="ic-as2">Warm Followers</label></div>
+            <div class="chip"><input type="radio" name="audience_stage" value="Existing" id="ic-as3"><label for="ic-as3">Existing Customers</label></div>
+          </div>
+          <div style="font-size:0.75rem;color:var(--gray-500);margin-top:4px;">Cold → leads with the problem · Warm → leads with the solution · Existing → leads with results</div>
+        </div>
+
+      </div>
+
+      <!-- ── Section 3: Visual Identity ── -->
+      <div class="form-section">
+        <div class="form-section-title">🎨 Visual Identity</div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Brand Personality</label>
+            <input type="text" name="brand_personality" class="form-control" placeholder="e.g. Fresh, confident, approachable · Bold, premium, no-nonsense">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Color Preference</label>
+            <input type="text" name="brand_colors" class="form-control" placeholder="e.g. Soft peach, cream, gold · Navy + white + lime green">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Emotion to Evoke</label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="emotion_to_evoke" value="Confidence" id="ic-em1" checked><label for="ic-em1">Confidence</label></div>
+            <div class="chip"><input type="radio" name="emotion_to_evoke" value="Trust" id="ic-em2"><label for="ic-em2">Trust</label></div>
+            <div class="chip"><input type="radio" name="emotion_to_evoke" value="Excitement" id="ic-em3"><label for="ic-em3">Excitement</label></div>
+            <div class="chip"><input type="radio" name="emotion_to_evoke" value="FOMO" id="ic-em4"><label for="ic-em4">FOMO</label></div>
+            <div class="chip"><input type="radio" name="emotion_to_evoke" value="Aspiration" id="ic-em5"><label for="ic-em5">Aspiration</label></div>
+            <div class="chip"><input type="radio" name="emotion_to_evoke" value="Calm / Comfort" id="ic-em6"><label for="ic-em6">Calm / Comfort</label></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Visual Style</label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="visual_style" value="Product Flat Lay + Bold Typography" id="ic-vs1" checked><label for="ic-vs1">Product Flat Lay</label></div>
+            <div class="chip"><input type="radio" name="visual_style" value="Lifestyle Photography + Soft Text" id="ic-vs2"><label for="ic-vs2">Lifestyle Photo</label></div>
+            <div class="chip"><input type="radio" name="visual_style" value="Bold Graphic + Minimal Image" id="ic-vs3"><label for="ic-vs3">Bold Graphic</label></div>
+            <div class="chip"><input type="radio" name="visual_style" value="Tutorial / Step-by-Step Illustration" id="ic-vs4"><label for="ic-vs4">Tutorial Steps</label></div>
+            <div class="chip"><input type="radio" name="visual_style" value="Before / After Reveal" id="ic-vs5"><label for="ic-vs5">Before / After</label></div>
+            <div class="chip"><input type="radio" name="visual_style" value="Minimal Clean + Icon-Led" id="ic-vs6"><label for="ic-vs6">Minimal + Icons</label></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Font Style</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="font_style" value="Modern Sans" id="ic-fs1" checked><label for="ic-fs1">Modern Sans</label></div>
+              <div class="chip"><input type="radio" name="font_style" value="Classic Serif" id="ic-fs2"><label for="ic-fs2">Classic Serif</label></div>
+              <div class="chip"><input type="radio" name="font_style" value="Playful" id="ic-fs3"><label for="ic-fs3">Playful</label></div>
+              <div class="chip"><input type="radio" name="font_style" value="Bold Display" id="ic-fs4"><label for="ic-fs4">Bold Display</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Aspect Ratio</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="aspect_ratio" value="4:5 Portrait" id="ic-ar1" checked><label for="ic-ar1">4:5 Portrait</label></div>
+              <div class="chip"><input type="radio" name="aspect_ratio" value="1:1 Square" id="ic-ar2"><label for="ic-ar2">1:1 Square</label></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="upload-box" id="box-ic-logo" style="margin-bottom:1rem;">
+          <input type="file" name="logo_file" accept="image/*,.svg" onchange="showFile(this,'box-ic-logo')">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-label">Upload Logo (Optional)</div>
+          <div class="upload-hint">PNG with transparent background preferred</div>
+        </div>
+
+        <div class="upload-box" id="box-ic-products" style="margin-bottom:0;">
+          <input type="file" name="carousel_product_photos" accept="image/*" multiple onchange="showMultiFile(this,'box-ic-products','ic-file-list')">
+          <div class="upload-icon">📦</div>
+          <div class="upload-label">Product / Reference Photos (Optional)</div>
+          <div class="upload-hint">Product shots, reference images, moodboard — anything visual that guides the pilot</div>
+          <div class="file-shown" id="ic-file-list"></div>
+        </div>
+      </div>
+
+      <!-- ── Section 4: Caption Direction ── -->
+      <div class="form-section">
+        <div class="form-section-title">✍️ Caption Direction <span style="font-size:0.78rem;font-weight:400;color:var(--gray-500);">— Optional. Leave blank and the pilot will craft everything.</span></div>
+
+        <div class="form-group">
+          <label class="form-label">Headline Direction <span style="font-size:0.78rem;font-weight:400;color:var(--gray-500);">(max 8 words)</span></label>
+          <input type="text" name="headline_direction" class="form-control" placeholder="e.g. Stop losing clients after the first call">
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Hashtag Seeds <span style="font-size:0.78rem;font-weight:400;color:var(--gray-500);">(any specific hashtags to include)</span></label>
+          <textarea name="hashtag_seeds" class="form-control" rows="2" placeholder="e.g. #cleanbeauty #glowupskincare #vitaminc"></textarea>
+        </div>
+      </div>
+
+      <!-- ── Section 5: Any other notes ── -->
+      <div class="form-section">
+        <div class="form-section-title">📋 Additional Notes <span style="font-size:0.78rem;font-weight:400;color:var(--gray-500);">(optional)</span></div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Anything else the pilot should know?</label>
+          <textarea name="key_points" class="form-control" rows="3" placeholder="e.g. Avoid competitor brand names · Keep it minimal · Must include our tagline 'Glow from within'"></textarea>
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-amount">₹649</div>
+        <div class="price-breakdown">Flat rate · 2 options per slide · ZIP (PNGs + caption.txt)</div>
+        <div class="price-sla">⏱ Delivered within 2–3 hours of assignment</div>
+      </div>
+    </div>
+
+    <!-- ═══ BRAND DEMO VIDEO ═══ -->
+    <div class="sku-form" id="form-brand_demo_video">
+      <div class="form-section">
+        <div class="form-section-title">📷 Upload Product / Brand Photos</div>
+        <div class="upload-box" id="box-bdv-photos">
+          <input type="file" name="product_photos" accept="image/*" multiple onchange="showMultiFile(this,'box-bdv-photos','bdv-file-list')">
+          <div class="upload-icon">📷</div>
+          <div class="upload-label">Upload Photos (min 5)</div>
+          <div class="upload-hint">Product shots, brand shots, lifestyle — any quality is fine</div>
+          <div class="multi-file-list" id="bdv-file-list"></div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">📹 Video Details</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Brand / Product Name <span class="required">*</span></label>
+            <input type="text" name="brand_name" class="form-control" placeholder="e.g. BRF Bottles" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Audience</label>
+            <input type="text" name="target_audience" class="form-control" placeholder="e.g. Fitness enthusiasts 25–40">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Key Features / USPs (3–5 points) <span class="required">*</span></label>
+          <textarea name="usps" class="form-control" rows="2" placeholder="e.g. Double-walled insulation, 1 litre, BPA-free, 10 colour options" required></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Business URL(s) <span class="required">*</span></label>
+          <textarea name="business_urls" class="form-control" rows="2" placeholder="Paste any URL where your business is listed — website, Instagram, Facebook, LinkedIn, etc." required></textarea>
+          <div style="font-size:0.75rem;color:var(--gray-500);margin-top:4px;">The pilot will study these pages to extract your Brand DNA (tone, colors, audience, and palette) before building the video.</div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Video Duration</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="duration" value="15s" id="bdv-d1"><label for="bdv-d1">15 sec</label></div>
+              <div class="chip"><input type="radio" name="duration" value="30s" id="bdv-d2" checked><label for="bdv-d2">30 sec</label></div>
+              <div class="chip"><input type="radio" name="duration" value="60s" id="bdv-d3"><label for="bdv-d3">60 sec</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tone</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="tone" value="Professional" id="bdv-t1"><label for="bdv-t1">Professional</label></div>
+              <div class="chip"><input type="radio" name="tone" value="Fun" id="bdv-t2"><label for="bdv-t2">Fun</label></div>
+              <div class="chip"><input type="radio" name="tone" value="Aspirational" id="bdv-t3" checked><label for="bdv-t3">Aspirational</label></div>
+              <div class="chip"><input type="radio" name="tone" value="Urgent" id="bdv-t4"><label for="bdv-t4">Urgent / Offer</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Target Platform</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="platform" value="Instagram Reel" id="bdv-pl1" checked><label for="bdv-pl1">Instagram Reel</label></div>
+              <div class="chip"><input type="radio" name="platform" value="YouTube Shorts" id="bdv-pl2"><label for="bdv-pl2">YouTube Shorts</label></div>
+              <div class="chip"><input type="radio" name="platform" value="Amazon" id="bdv-pl3"><label for="bdv-pl3">Amazon</label></div>
+              <div class="chip"><input type="radio" name="platform" value="WhatsApp" id="bdv-pl4"><label for="bdv-pl4">WhatsApp</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Music</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="music" value="soft" id="bdv-m1"><label for="bdv-m1">Soft</label></div>
+              <div class="chip"><input type="radio" name="music" value="energetic" id="bdv-m2" checked><label for="bdv-m2">Energetic</label></div>
+              <div class="chip"><input type="radio" name="music" value="none" id="bdv-m3"><label for="bdv-m3">None</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Brand Handle / Contact for End Frame</label>
+          <input type="text" name="brand_contact" class="form-control" placeholder="e.g. @brfbottles or +91 98765 43210">
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-amount">₹1,249</div>
+        <div class="price-breakdown">Flat rate · video delivered in correct platform ratio</div>
+        <div class="price-sla">⏱ Delivered within 3–5 hours of assignment</div>
+      </div>
+    </div>
+
+    <!-- ═══ ANNOUNCEMENT PACK ═══ -->
+    <div class="sku-form" id="form-announcement_pack">
+      <div class="form-section">
+        <div class="form-section-title">📣 What Are You Announcing?</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Brand / Business Name <span class="required">*</span></label>
+            <input type="text" name="brand_name" class="form-control" placeholder="e.g. Brew & Co, Dr. Mehta's Clinic" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Announcement Type</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="announcement_type" value="Special Offer" id="ap-at1" checked><label for="ap-at1">Special Offer</label></div>
+              <div class="chip"><input type="radio" name="announcement_type" value="New Launch" id="ap-at2"><label for="ap-at2">New Launch</label></div>
+              <div class="chip"><input type="radio" name="announcement_type" value="Branch Opening" id="ap-at3"><label for="ap-at3">Branch Opening</label></div>
+              <div class="chip"><input type="radio" name="announcement_type" value="Event" id="ap-at4"><label for="ap-at4">Event</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Headline / Main Message <span class="required">*</span></label>
+          <input type="text" name="headline" class="form-control" placeholder="e.g. 50% Off This Weekend Only · Now Open in Bandra · Launching: The Summer Menu" required>
+          <div style="font-size:0.72rem;color:var(--gray-400);margin-top:0.3rem;">This is the big bold line on all 3 assets. Keep it short and punchy.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Supporting Details (2–3 points)</label>
+          <textarea name="sub_points" class="form-control" rows="2" placeholder="e.g. Valid 15–17 Nov · All items included · No coupon needed"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Business URL(s) <span class="required">*</span></label>
+          <textarea name="business_urls" class="form-control" rows="2" placeholder="Paste any URL where your business is listed — website, Instagram, Facebook, LinkedIn, etc." required></textarea>
+          <div style="font-size:0.75rem;color:var(--gray-500);margin-top:4px;">The pilot will study these pages to extract your Brand DNA (tone, colors, audience, and palette) before building the announcements.</div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Call to Action <span class="required">*</span></label>
+            <input type="text" name="cta_text" class="form-control" placeholder="e.g. DM to book · Call now · Visit us today" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact (phone / handle / link)</label>
+            <input type="text" name="contact" class="form-control" placeholder="e.g. +91 98765 43210 or @brewandco">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Tone</label>
+          <div class="chips">
+            <div class="chip"><input type="radio" name="tone" value="Exciting" id="ap-tn1" checked><label for="ap-tn1">Exciting</label></div>
+            <div class="chip"><input type="radio" name="tone" value="Premium" id="ap-tn2"><label for="ap-tn2">Premium</label></div>
+            <div class="chip"><input type="radio" name="tone" value="Friendly" id="ap-tn3"><label for="ap-tn3">Friendly</label></div>
+            <div class="chip"><input type="radio" name="tone" value="Urgent" id="ap-tn4"><label for="ap-tn4">Urgent</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">🎨 Brand & Visual</div>
+        <div class="form-group">
+          <label class="form-label">Brand Colours (hex or describe)</label>
+          <input type="text" name="brand_colors" class="form-control" placeholder="e.g. #1A3A5C and gold · Navy + Cream · Orange and white">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Visual Direction (optional)</label>
+          <input type="text" name="visual_direction" class="form-control" placeholder="e.g. Dark moody background · Bright summer feel · Minimalist white with gold accents">
+        </div>
+        <div class="upload-box" id="box-ap-logo">
+          <input type="file" name="logo_file" accept="image/*,.svg" onchange="showFile(this,'box-ap-logo')">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-label">Upload Logo (Optional)</div>
+          <div class="upload-hint">PNG with transparent background preferred</div>
+        </div>
+        <div class="upload-box" id="box-ap-ref" style="margin-top:0.75rem;">
+          <input type="file" name="reference_image" accept="image/*" onchange="showFile(this,'box-ap-ref')">
+          <div class="upload-icon">📸</div>
+          <div class="upload-label">Reference Image (Optional)</div>
+          <div class="upload-hint">A photo of your product, store, or dish to use as the hero visual</div>
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-amount">₹499</div>
+        <div class="price-breakdown">Flat rate · Instagram Post + Story + WhatsApp card</div>
+        <div class="price-sla">⏱ Delivered within 2–3 hours of assignment</div>
+      </div>
+    </div>
+
+    <!-- ═══ BRAND STARTER KIT ═══ -->
+    <div class="sku-form" id="form-brand_starter_kit">
+      <div class="form-section">
+        <div class="form-section-title">🚀 Brand Details</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Business Name <span class="required">*</span></label>
+            <input type="text" name="business_name" class="form-control" placeholder="e.g. Bloom Wellness" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Industry / Type of Business <span class="required">*</span></label>
+            <input type="text" name="industry" class="form-control" placeholder="e.g. Online coaching, Restaurant, D2C skincare" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">3 Words that Describe Your Brand Personality <span class="required">*</span></label>
+          <input type="text" name="personality" class="form-control" placeholder="e.g. Trustworthy, Modern, Warm — or Playful, Bold, Fun" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Customer</label>
+          <textarea name="target_customer" class="form-control" rows="2" placeholder="e.g. Working women 25–40 who want healthy meal options delivered at home"></textarea>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Colour Preference</label>
+            <input type="text" name="color_preference" class="form-control" placeholder="e.g. Earthy tones, No preference, Must use Navy blue">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Style Direction</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="style_direction" value="Minimal" id="bsk-s1" checked><label for="bsk-s1">Minimal</label></div>
+              <div class="chip"><input type="radio" name="style_direction" value="Bold" id="bsk-s2"><label for="bsk-s2">Bold</label></div>
+              <div class="chip"><input type="radio" name="style_direction" value="Traditional" id="bsk-s3"><label for="bsk-s3">Traditional</label></div>
+              <div class="chip"><input type="radio" name="style_direction" value="Luxury" id="bsk-s4"><label for="bsk-s4">Luxury</label></div>
+              <div class="chip"><input type="radio" name="style_direction" value="Playful" id="bsk-s5"><label for="bsk-s5">Playful</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tagline</label>
+          <input type="text" name="tagline" class="form-control" placeholder="Your existing tagline — or leave blank for us to create one">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Brands / Competitors You Admire (optional)</label>
+          <input type="text" name="reference_brands" class="form-control" placeholder="e.g. Mamaearth, Nykaa, Paper Boat — or any brand you like the look of">
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">🎁 What You Get!</div>
+        <div class="check-chips">
+          <div class="check-chip"><input type="checkbox" name="deliverables" value="Logo options (3 concepts)" id="bsk-d1" checked><label for="bsk-d1">Logo (3 concepts)</label></div>
+          <div class="check-chip"><input type="checkbox" name="deliverables" value="Colour palette" id="bsk-d2" checked><label for="bsk-d2">Colour Palette</label></div>
+          <div class="check-chip"><input type="checkbox" name="deliverables" value="Font pairing" id="bsk-d3" checked><label for="bsk-d3">Font Pairing</label></div>
+          <div class="check-chip"><input type="checkbox" name="deliverables" value="Business card design" id="bsk-d4" checked><label for="bsk-d4">Business Card</label></div>
+          <div class="check-chip"><input type="checkbox" name="deliverables" value="Social media banner" id="bsk-d5" checked><label for="bsk-d5">Social Media Banner</label></div>
+          <div class="check-chip"><input type="checkbox" name="deliverables" value="Letterhead" id="bsk-d6" checked><label for="bsk-d6">Letterhead</label></div>
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-amount">₹1,999</div>
+        <div class="price-breakdown">Flat rate · all selected deliverables as PDF + PNG</div>
+        <div class="price-sla">⏱ Delivered within 4 hours of assignment</div>
+      </div>
+    </div>
+
+    <!-- ═══ MENU DESIGN ═══ -->
+    <div class="sku-form" id="form-menu_design">
+      <div class="form-section">
+        <div class="form-section-title">🍽️ Business & Menu Details</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Business Name <span class="required">*</span></label>
+            <input type="text" name="business_name" class="form-control" placeholder="e.g. Chai & More Café" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand Colours</label>
+            <input type="text" name="brand_colors" class="form-control" placeholder="e.g. Terracotta and cream, No preference">
+          </div>
+        </div>
+        <div class="upload-box" id="box-md-logo" style="margin-bottom:0.5rem;">
+          <input type="file" name="logo_file" accept="image/*,.svg" onchange="showFile(this,'box-md-logo'); document.getElementById('md-logo-create-wrap').style.display='none';">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-label">Upload Logo (Recommended)</div>
+          <div class="upload-hint">PNG, SVG, JPG — transparent background preferred</div>
+        </div>
+        <div id="md-logo-create-wrap" style="margin-bottom:0.75rem;">
+          <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.875rem;color:var(--gray-600);background:#FFF8E6;border:1px solid #E8C84A;border-radius:var(--radius);padding:0.5rem 0.75rem;">
+            <input type="checkbox" name="create_logo" value="yes" style="width:16px;height:16px;accent-color:var(--gold);">
+            <span>I don't have a logo — <strong>please create one for me</strong> based on my brand colours and business name</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Business URL(s) <span class="required">*</span></label>
+          <textarea name="business_urls" class="form-control" rows="2" placeholder="Paste any URL where your business is listed — website, Instagram, Facebook, LinkedIn, etc." required></textarea>
+          <div style="font-size:0.75rem;color:var(--gray-500);margin-top:4px;">The pilot will study these pages to extract your Brand DNA (tone, colors, audience, and palette) before building the menu.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Menu Items + Prices <span class="required">*</span></label>
+          <textarea name="menu_items_text" class="form-control" rows="6" placeholder="Paste your menu here — organised by section:&#10;&#10;STARTERS&#10;Paneer Tikka — ₹220&#10;Veg Spring Roll — ₹180&#10;&#10;MAINS&#10;Dal Makhani — ₹280&#10;Paneer Butter Masala — ₹320&#10;&#10;DESSERTS&#10;Gulab Jamun — ₹120" required></textarea>
+        </div>
+        <div class="upload-box" id="box-md-existing" style="margin-bottom:0;">
+          <input type="file" name="existing_menu" accept="image/*,.pdf,.doc,.docx,.html,.htm,.txt" onchange="showFile(this,'box-md-existing')">
+          <div class="upload-icon">📄</div>
+          <div class="upload-label">Upload Existing Menu (Optional — image, PDF, Word doc, HTML)</div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">📐 Format & Style</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Menu Format</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="menu_format" value="A4 single page" id="md-f1" checked><label for="md-f1">A4 Single Page</label></div>
+              <div class="chip"><input type="radio" name="menu_format" value="A4 double-sided" id="md-f2"><label for="md-f2">A4 Double-sided</label></div>
+              <div class="chip"><input type="radio" name="menu_format" value="Trifold" id="md-f3"><label for="md-f3">Trifold</label></div>
+              <div class="chip"><input type="radio" name="menu_format" value="Digital only" id="md-f4"><label for="md-f4">Digital Only</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Style</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="menu_style" value="modern" id="md-s1" checked><label for="md-s1">Modern</label></div>
+              <div class="chip"><input type="radio" name="menu_style" value="rustic" id="md-s2"><label for="md-s2">Rustic</label></div>
+              <div class="chip"><input type="radio" name="menu_style" value="minimal" id="md-s3"><label for="md-s3">Minimal</label></div>
+              <div class="chip"><input type="radio" name="menu_style" value="traditional" id="md-s4"><label for="md-s4">Traditional</label></div>
+              <div class="chip"><input type="radio" name="menu_style" value="festive" id="md-s5"><label for="md-s5">Festive</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Output Needed</label>
+            <div class="check-chips">
+              <div class="check-chip"><input type="checkbox" name="output_format" value="Print-ready PDF" id="md-o1" checked><label for="md-o1">Print PDF</label></div>
+              <div class="check-chip"><input type="checkbox" name="output_format" value="Digital image (WhatsApp)" id="md-o2" checked><label for="md-o2">Digital / WhatsApp</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dietary Icons (Veg / Non-veg markers)?</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="dietary_icons" value="yes" id="md-di1"><label for="md-di1">Yes</label></div>
+              <div class="chip"><input type="radio" name="dietary_icons" value="no" id="md-di2" checked><label for="md-di2">No</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Special Callouts</label>
+          <input type="text" name="special_callouts" class="form-control" placeholder="e.g. Highlight chef's specials, Add QR code for full menu, Add takeaway number">
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-amount">₹799</div>
+        <div class="price-breakdown">Flat rate · print PDF + digital image delivered</div>
+        <div class="price-sla">⏱ Delivered within 3–4 hours of assignment</div>
+      </div>
+    </div>
+
+    <!-- ═══ PODCAST REEL ═══ -->
+    <div class="sku-form" id="form-podcast_reel">
+      <div class="form-section">
+        <div class="form-section-title">🎙️ Upload Audio File</div>
+        <div class="upload-box" id="box-pc-audio">
+          <input type="file" name="audio_file" accept="audio/*,.mp3,.m4a,.wav,.aac" onchange="showFile(this,'box-pc-audio')">
+          <div class="upload-icon">🎙️</div>
+          <div class="upload-label">Upload Audio Recording</div>
+          <div class="upload-hint">MP3, M4A, WAV or AAC — any quality</div>
+        </div>
+        <div class="upload-box" id="box-pc-logo" style="margin-top:0.75rem;">
+          <input type="file" name="logo_file" accept="image/*" onchange="showFile(this,'box-pc-logo')">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-label">Show / Brand Logo (Optional)</div>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">📝 Episode Details</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Show Name <span class="required">*</span></label>
+            <input type="text" name="show_name" class="form-control" placeholder="e.g. The Founder's Table" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Total Recording Duration</label>
+            <input type="text" name="recording_duration" class="form-control" placeholder="e.g. 45 minutes">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Host Name</label>
+            <input type="text" name="host_name" class="form-control" placeholder="Your name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Guest Name</label>
+            <input type="text" name="guest_name" class="form-control" placeholder="Guest name or Solo">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Episode Topic <span class="required">*</span></label>
+          <input type="text" name="episode_topic" class="form-control" placeholder="e.g. How I built a ₹1Cr business with no investment" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">3 Moments You Want Included (timestamps or descriptions)</label>
+          <textarea name="preferred_moments" class="form-control" rows="2" placeholder="1. Around 12:00 — the story about the first rejection&#10;2. Around 28:00 — the key insight on pricing&#10;3. Anywhere — the funniest moment"></textarea>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="form-section-title">🎨 Output Preferences</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Output Format</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="output_format" value="audiogram" id="pc-of1" checked><label for="pc-of1">Audiogram + Captions</label></div>
+              <div class="chip"><input type="radio" name="output_format" value="static_waveform" id="pc-of2"><label for="pc-of2">Static Image + Waveform</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Platform</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="target_platform" value="Instagram" id="pc-pl1" checked><label for="pc-pl1">Instagram</label></div>
+              <div class="chip"><input type="radio" name="target_platform" value="YouTube Shorts" id="pc-pl2"><label for="pc-pl2">YouTube Shorts</label></div>
+              <div class="chip"><input type="radio" name="target_platform" value="LinkedIn" id="pc-pl3"><label for="pc-pl3">LinkedIn</label></div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Caption Style</label>
+            <div class="chips">
+              <div class="chip"><input type="radio" name="caption_style" value="full" id="pc-cs1" checked><label for="pc-cs1">Full Captions</label></div>
+              <div class="chip"><input type="radio" name="caption_style" value="keywords" id="pc-cs2"><label for="pc-cs2">Key Words Only</label></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand Colours</label>
+            <input type="text" name="brand_colors" class="form-control" placeholder="e.g. Dark green and gold, No preference">
+          </div>
+        </div>
+      </div>
+      <div class="price-card">
+        <div class="price-amount">₹649</div>
+        <div class="price-breakdown">Flat rate · 3 highlight clips · cleaned audio</div>
+        <div class="price-sla">⏱ Delivered within 2–3 hours of assignment</div>
+      </div>
+    </div>
+
+    <!-- ═══ VOICE NOTE (shared — shown when any SKU is selected) ═══ -->
+    <div class="form-section" id="voiceNoteSection" style="display:none;">
+      <div class="form-section-title">🎙️ Voice Brief <span style="font-size:0.75rem;font-weight:400;color:var(--gray-500);">Optional</span></div>
+      <div style="border:1.5px dashed var(--gray-300);border-radius:10px;padding:20px 18px;background:var(--gray-50);text-align:center;" id="vn-recorder-box">
+
+        <!-- idle state -->
+        <div id="vn-idle">
+          <div style="font-size:1.75rem;margin-bottom:6px;">🎙️</div>
+          <div style="font-weight:600;font-size:0.95rem;color:var(--gray-700);margin-bottom:4px;">Record a Voice Brief</div>
+          <div style="font-size:0.8rem;color:var(--gray-500);margin-bottom:14px;">30–60 sec is ideal. Describe what you want — tone, focus, anything the form can't capture.</div>
+          <button type="button" onclick="vnStart()" style="background:var(--navy);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:0.9rem;font-weight:700;cursor:pointer;">🎙 Start Recording</button>
+          <div style="margin-top:10px;font-size:0.75rem;color:var(--gray-400);">Or <label for="vn-file-upload" style="color:var(--navy);cursor:pointer;text-decoration:underline;">upload an existing file</label></div>
+          <input type="file" id="vn-file-upload" accept=".mp3,.m4a,.ogg,.webm,.wav" style="display:none;" onchange="vnFileChosen(this)">
+        </div>
+
+        <!-- recording state -->
+        <div id="vn-recording" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px;">
+            <span style="width:10px;height:10px;background:#ef4444;border-radius:50%;display:inline-block;animation:vn-pulse 1s infinite;"></span>
+            <span style="font-weight:700;color:#ef4444;font-size:0.95rem;">Recording…</span>
+            <span id="vn-timer" style="font-variant-numeric:tabular-nums;font-size:0.9rem;color:var(--gray-600);">0:00</span>
+          </div>
+          <button type="button" onclick="vnStop()" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:0.9rem;font-weight:700;cursor:pointer;">⏹ Stop</button>
+        </div>
+
+        <!-- done state -->
+        <div id="vn-done" style="display:none;">
+          <div style="font-size:1.5rem;margin-bottom:6px;">✅</div>
+          <div style="font-weight:600;font-size:0.9rem;color:var(--gray-700);margin-bottom:10px;" id="vn-done-label">Voice brief recorded</div>
+          <audio id="vn-playback" controls style="width:100%;max-width:320px;margin-bottom:12px;"></audio>
+          <div>
+            <button type="button" onclick="vnReset()" style="background:transparent;color:var(--gray-500);border:1.5px solid var(--gray-300);border-radius:8px;padding:7px 18px;font-size:0.85rem;cursor:pointer;">🗑 Re-record</button>
+          </div>
+        </div>
+
+        <!-- mic denied state -->
+        <div id="vn-denied" style="display:none;">
+          <div style="color:#dc2626;font-size:0.85rem;margin-bottom:10px;">⚠️ Microphone access was denied. Please allow mic access in your browser or upload a file instead.</div>
+          <label for="vn-file-upload-denied" style="background:var(--navy);color:#fff;border-radius:8px;padding:9px 20px;font-size:0.85rem;font-weight:700;cursor:pointer;display:inline-block;">Upload file instead</label>
+          <input type="file" id="vn-file-upload-denied" accept=".mp3,.m4a,.ogg,.webm,.wav" style="display:none;" onchange="vnFileChosen(this)">
+        </div>
+
+      </div>
+    </div>
+
+    <style>
+    @keyframes vn-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    </style>
+
+    <!-- ═══ CONTACT FIELDS ═══ -->
+    <div class="form-section" id="contactSection" style="display:none;">
+      <div class="form-section-title">👤 Your Details</div>
+      <p style="color:var(--gray-600);font-size:0.875rem;">Logged in as <strong>{{ current_user.name }}</strong> · {{ current_user.phone }}</p>
+    </div>
+
+    <!-- SUBMIT BAR -->
+    <div class="submit-bar" id="submitBar" style="display:none;">
+      <input type="hidden" name="use_free_pass" id="useFreePassInput" value="0">
+      <!-- BUG 9 fix: dynamic price ribbon reads from active SKU -->
+      <div id="submitPriceRibbon" style="font-size:1.2rem;font-weight:800;color:var(--gold);white-space:nowrap;min-width:90px;"></div>
+      <button type="submit" class="btn btn-primary" style="padding:0.75rem 2rem;font-size:1rem;" id="submitBtn">
+        Submit Order
+      </button>
+      {% if current_user.is_authenticated and current_user.phone == '9876543210' %}
+      <button type="button" id="freePassBtn"
+              onclick="activateFreePass()"
+              style="padding:0.75rem 1.25rem;font-size:0.875rem;font-weight:700;background:#1e293b;color:#f59e0b;border:1.5px dashed #f59e0b;border-radius:var(--radius-lg);cursor:pointer;letter-spacing:0.03em;">
+        🎟 Use Free Pass
+      </button>
+      {% endif %}
+      <div>
+        <div style="font-size:0.8rem;color:var(--gray-500);" id="submitNote"></div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  let currentSku = null;
+
+
+  function selectSku(sku, el) {
+    document.querySelectorAll('.sku-pick').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+    
+    document.querySelectorAll('.sku-form').forEach(f => {
+      f.classList.remove('visible');
+      f.querySelectorAll('input, textarea, select').forEach(i => i.disabled = true);
+    });
+    
+    const form = document.getElementById('form-' + sku);
+    if (form) {
+      form.classList.add('visible');
+      form.querySelectorAll('input, textarea, select').forEach(i => i.disabled = false);
+    }
+    
+    document.getElementById('taskTypeInput').value = sku;
+    document.getElementById('voiceNoteSection').style.display = 'block';
+    document.getElementById('contactSection').style.display = 'block';
+    document.getElementById('submitBar').style.display = 'flex';
+    currentSku = sku;
+    // BUG 9 fix: update price ribbon from the selected SKU card's price text
+    const ribbon = document.getElementById('submitPriceRibbon');
+    if (ribbon) {
+      const spPrice = el.querySelector('.sp-price');
+      // Use innerText to strip <small> tags (e.g. "flat", "/image")
+      ribbon.textContent = spPrice ? spPrice.innerText.trim() : '';
+    }
+    // VS: override ribbon with live dynamic price (BUG 4/5 fix)
+    if (sku === 'virtual_staging' && typeof updateVsPrice === 'function') updateVsPrice();
+    window.scrollTo({top: document.getElementById('form-'+sku).offsetTop - 80, behavior:'smooth'});
+  }
+
+  function changeQty(delta, sku, minVal) {
+    const el = document.getElementById('qty-' + sku);
+    const hid = document.getElementById('count-' + sku);
+    if (!el) return;
+    let v = parseInt(el.textContent) + delta;
+    if (v < minVal) v = minVal;
+    el.textContent = v;
+    if (hid) hid.value = v;
+    updatePrice(sku, v);
+  }
+
+  const UNIT_PRICES = {
+    'bg_cleanup': 79, 'product_listing': 199, 'product_mockup': 299
+  };
+
+  function updatePrice(sku, count) {
+    const unit = UNIT_PRICES[sku];
+    if (!unit) return;
+    const total = unit * count;
+    const amtEl = document.getElementById('pamt-' + sku);
+    const brkEl = document.getElementById('pbrk-' + sku);
+    if (amtEl) amtEl.textContent = '₹' + total.toLocaleString('en-IN');
+    if (brkEl) {
+      const labels = {'bg_cleanup':'image','product_listing':'product','product_mockup':'mockup'};
+      brkEl.textContent = '₹' + unit + ' × ' + count + ' ' + (labels[sku] || 'unit') + (count>1?'s':'');
+    }
+  }
+
+  // Virtual Staging — dynamic rooms
+  let vsRoomCount = 1; // legacy — kept in case referenced elsewhere
+  // Virtual Staging — dynamic labeled photo rows with POV A + POV B
+  let vsPhotoCount = 1;
+  const vsRoomOptions = ['Living Room','Living + Dining (Combined)','Dining Area','Kitchen','Master Bedroom','Master Bathroom','Bedroom 2','Bedroom 3','Bedroom 4','Bathroom','Balcony','Terrace','Study / Home Office','Lobby / Entrance','Exterior / Facade','Amenity (Pool / Gym)','Other'];
+  function addVsPhotoRow() {
+    if (vsPhotoCount >= 12) return;
+    const idx = vsPhotoCount;
+    vsPhotoCount++;
+    const container = document.getElementById('vs-photo-rows');
+    const row = document.createElement('div');
+    row.className = 'vs-photo-row';
+    row.style.cssText = 'display:grid;grid-template-columns:160px 1fr 1fr 1fr auto;gap:0.5rem;margin-bottom:0.6rem;align-items:start;';
+    row.innerHTML = `
+      <select name="room_labels[]" class="form-control" style="margin-top:0;">${vsRoomOptions.map(o=>`<option>${o}</option>`).join('')}</select>
+      <div class="upload-box" style="margin:0;" id="box-vs-p${idx}a">
+        <input type="file" name="room_photos[]" accept="image/*" onchange="showFile(this,'box-vs-p${idx}a')" required>
+        <div class="upload-icon" style="font-size:0.9rem;margin:0;">📷</div>
+        <div class="upload-label" style="font-size:0.75rem;">Upload</div>
+        <div class="file-shown" style="font-size:0.68rem;"></div>
+      </div>
+      <div class="upload-box" style="margin:0;border-style:dashed;border-color:#f59e0b;background:#fffbeb;" id="box-vs-p${idx}b">
+        <input type="file" name="room_photos_b[]" accept="image/*" onchange="showFile(this,'box-vs-p${idx}b')">
+        <div class="upload-icon" style="font-size:0.9rem;margin:0;">📐</div>
+        <div class="upload-label" style="font-size:0.75rem;color:#92400e;">Upload (optional)</div>
+        <div class="file-shown" style="font-size:0.68rem;"></div>
+      </div>
+      <div class="upload-box" style="margin:0;border-style:dashed;border-color:#6366f1;background:#f5f3ff;" id="box-vs-mood${idx}">
+        <input type="file" name="room_moodboards[]" accept="image/*,.pdf" onchange="showFile(this,'box-vs-mood${idx}')">
+        <div class="upload-icon" style="font-size:0.9rem;margin:0;">🎨</div>
+        <div class="upload-label" style="font-size:0.75rem;color:#4f46e5;">Upload Moodboard (optional)</div>
+        <div class="file-shown" style="font-size:0.68rem;"></div>
+      </div>
+      <button type="button" onclick="this.closest('.vs-photo-row').remove()" style="margin-top:6px;background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;line-height:1;" aria-label="Remove">✕</button>`;
+    container.appendChild(row);
+  }
+
+  // ── Virtual Staging — tier selection + per-room surcharge (BUG 4/5 fix) ──
+  var currentVsTier = 'full';
+  var VS_TIER = {
+    'starter': { base: 649, maxRooms: 2, extraPerRoom: 0 },
+    'full':    { base: 799, maxRooms: 4, extraPerRoom: 100 }
+  };
+
+  function updateVsPrice() {
+    var info = VS_TIER[currentVsTier] || VS_TIER['full'];
+    var rooms = document.querySelectorAll('#vs-photo-rows .vs-photo-row').length;
+    var extra = Math.max(0, rooms - info.maxRooms);
+    var total = info.base + extra * info.extraPerRoom;
+    var priceEl = document.getElementById('vs-price-display');
+    var brkEl   = document.getElementById('vs-price-breakdown');
+    var surchEl = document.getElementById('vs-surcharge-note');
+    if (priceEl) priceEl.textContent = '₹' + total.toLocaleString('en-IN');
+    if (brkEl) {
+      brkEl.textContent = extra > 0
+        ? '₹' + info.base + ' base + ' + extra + ' × ₹100 extra room' + (extra > 1 ? 's' : '')
+        : (currentVsTier === 'starter' ? 'Flat rate · 2 rooms · one render per room' : 'Flat rate · up to 4 rooms staged · one render per room');
+    }
+    if (surchEl) {
+      if (extra > 0) {
+        surchEl.style.display = 'block';
+        surchEl.textContent = '⚠ Surcharge: ' + extra + ' extra room' + (extra > 1 ? 's' : '') + ' × ₹100 = +₹' + (extra * 100);
+      } else {
+        surchEl.style.display = 'none';
+      }
+    }
+    var ribbon = document.getElementById('submitPriceRibbon');
+    if (ribbon && currentSku === 'virtual_staging') ribbon.textContent = '₹' + total.toLocaleString('en-IN');
+  }
+
+  document.querySelectorAll('input[name="vs_tier"]').forEach(function(r) {
+    r.addEventListener('change', function() { currentVsTier = this.value; updateVsPrice(); });
+  });
+
+  // MutationObserver keeps surcharge live when rows are added or removed
+  var vsRowContainer = document.getElementById('vs-photo-rows');
+  if (vsRowContainer) {
+    new MutationObserver(function() { updateVsPrice(); }).observe(vsRowContainer, { childList: true });
+  }
+
+  // Property Reel — dynamic labeled photo rows with POV A + POV B
+  let prPhotoCount = 1;
+  function addPrPhotoRow() {
+    if (prPhotoCount >= 15) return;
+    prPhotoCount++;
+    const idx = prPhotoCount - 1;
+    const container = document.getElementById('pr-photo-rows');
+    const row = document.createElement('div');
+    row.className = 'pr-photo-row';
+    row.style.cssText = 'display:grid;grid-template-columns:160px 1fr 1fr 1fr auto;gap:0.5rem;margin-bottom:0.6rem;align-items:start;';
+    const areaOptions = ['Exterior / Facade','Living Room','Living + Dining (Combined)','Dining Area','Kitchen','Master Bedroom','Master Bathroom','Bedroom 2','Bedroom 3','Bedroom 4','Bathroom','Balcony','Terrace','Study / Home Office','Lobby / Entrance','Amenity (Pool / Gym / Clubhouse)','Other'];
+    row.innerHTML = `
+      <select name="property_photos_label[]" class="form-control" style="margin-top:0;">${areaOptions.map(o=>`<option>${o}</option>`).join('')}</select>
+      <div class="upload-box" style="margin:0;" id="box-pr-p${idx}a">
+        <input type="file" name="property_photos" accept="image/*" onchange="showFile(this,'box-pr-p${idx}a')">
+        <div class="upload-icon" style="font-size:0.9rem;margin:0;">📷</div>
+        <div class="upload-label" style="font-size:0.75rem;">Upload</div>
+        <div class="file-shown" style="font-size:0.68rem;"></div>
+      </div>
+      <div class="upload-box" style="margin:0;border-style:dashed;border-color:#f59e0b;background:#fffbeb;" id="box-pr-p${idx}b">
+        <input type="file" name="property_photos_b" accept="image/*" onchange="showFile(this,'box-pr-p${idx}b')">
+        <div class="upload-icon" style="font-size:0.9rem;margin:0;">📐</div>
+        <div class="upload-label" style="font-size:0.75rem;color:#92400e;">Upload (optional)</div>
+        <div class="file-shown" style="font-size:0.68rem;"></div>
+      </div>
+      <div class="upload-box" style="margin:0;border-style:dashed;border-color:#6366f1;background:#f5f3ff;" id="box-pr-mood${idx}">
+        <input type="file" name="property_moodboards" accept="image/*,.pdf" onchange="showFile(this,'box-pr-mood${idx}')">
+        <div class="upload-icon" style="font-size:0.9rem;margin:0;">🎨</div>
+        <div class="upload-label" style="font-size:0.75rem;color:#4f46e5;">Upload Moodboard (optional)</div>
+        <div class="file-shown" style="font-size:0.68rem;"></div>
+      </div>
+      <button type="button" onclick="this.closest('.pr-photo-row').remove()" style="margin-top:6px;background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;line-height:1;" aria-label="Remove">✕</button>`;
+    container.appendChild(row);
+  }
+
+  function showFile(input, boxId) {
+    const box = document.getElementById(boxId);
+    if (input.files && input.files[0]) {
+      box.classList.add('has-file');
+      const nameEl = box.querySelector('.file-shown');
+      if (nameEl) nameEl.textContent = '✓ ' + input.files[0].name;
+    }
+  }
+
+  function showMultiFile(input, boxId, listId) {
+    const box = document.getElementById(boxId);
+    const listEl = document.getElementById(listId);
+    if (!input.files || input.files.length === 0) return;
+    box.classList.add('has-file');
+    if (listEl) {
+      listEl.innerHTML = '';
+      Array.from(input.files).forEach((f, i) => {
+        const chip = document.createElement('span');
+        chip.className = 'file-chip-item';
+        const shortName = f.name.length > 22 ? f.name.substring(0,20)+'…' : f.name;
+        chip.innerHTML = `<span class="fc-name">📎 ${shortName}</span><button class="file-chip-remove" type="button" title="Remove" onclick="removeFileChip(this,'${boxId}','${listId}',${i})" aria-label="Remove">✕</button>`;
+        listEl.appendChild(chip);
+      });
+    }
+  }
+
+  function removeFileChip(btn, boxId, listId, idx) {
+    // Remove chip visually (can't truly remove from FileList - just grey it out)
+    const chip = btn.closest('.file-chip-item');
+    if (chip) { chip.style.opacity = '0.4'; chip.style.textDecoration = 'line-through'; btn.disabled = true; }
+  }
+
+  function showToast(msg, type) {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + (type||'info');
+    t.textContent = msg;
+    c.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 4000);
+  }
+
+  // Voice Brief recorder
+  var _vnMediaRecorder = null;
+  var _vnChunks = [];
+  var _vnBlob = null;
+  var _vnTimerInterval = null;
+  var _vnSeconds = 0;
+
+  function vnShow(state) {
+    ['idle','recording','done','denied'].forEach(function(s){
+      var el = document.getElementById('vn-' + s);
+      if (el) el.style.display = (s === state) ? '' : 'none';
+    });
+  }
+
+  function vnStart() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      vnShow('denied'); return;
+    }
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream) {
+      _vnChunks = [];
+      _vnBlob = null;
+      _vnSeconds = 0;
+      document.getElementById('vn-timer').textContent = '0:00';
+
+      var mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : (MediaRecorder.isTypeSupported('audio/ogg') ? 'audio/ogg' : '');
+      var opts = mimeType ? {mimeType: mimeType} : {};
+      _vnMediaRecorder = new MediaRecorder(stream, opts);
+
+      _vnMediaRecorder.ondataavailable = function(e) {
+        if (e.data && e.data.size > 0) _vnChunks.push(e.data);
+      };
+      _vnMediaRecorder.onstop = function() {
+        stream.getTracks().forEach(function(t){ t.stop(); });
+        _vnBlob = new Blob(_vnChunks, {type: mimeType || 'audio/webm'});
+        var url = URL.createObjectURL(_vnBlob);
+        document.getElementById('vn-playback').src = url;
+        var mins = Math.floor(_vnSeconds / 60);
+        var secs = _vnSeconds % 60;
+        document.getElementById('vn-done-label').textContent =
+          'Voice brief recorded (' + mins + ':' + (secs < 10 ? '0' : '') + secs + ')';
+        clearInterval(_vnTimerInterval);
+        vnShow('done');
+        _vnMediaRecorder = null;
+      };
+
+      _vnMediaRecorder.start(200);
+      vnShow('recording');
+
+      _vnTimerInterval = setInterval(function() {
+        _vnSeconds++;
+        var m = Math.floor(_vnSeconds / 60);
+        var s = _vnSeconds % 60;
+        document.getElementById('vn-timer').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+      }, 1000);
+
+    }).catch(function() {
+      vnShow('denied');
+    });
+  }
+
+  function vnStop() {
+    if (_vnMediaRecorder && _vnMediaRecorder.state !== 'inactive') {
+      _vnMediaRecorder.stop();
+    }
+    clearInterval(_vnTimerInterval);
+  }
+
+  function vnReset() {
+    _vnBlob = null;
+    _vnChunks = [];
+    _vnSeconds = 0;
+    clearInterval(_vnTimerInterval);
+    if (_vnMediaRecorder && _vnMediaRecorder.state !== 'inactive') {
+      _vnMediaRecorder.stop();
+    }
+    document.getElementById('vn-playback').src = '';
+    vnShow('idle');
+  }
+
+  function vnFileChosen(input) {
+    if (!input.files || !input.files[0]) return;
+    _vnBlob = input.files[0];
+    var url = URL.createObjectURL(_vnBlob);
+    document.getElementById('vn-playback').src = url;
+    document.getElementById('vn-done-label').textContent = 'Voice brief: ' + input.files[0].name;
+    vnShow('done');
+  }
+
+  function activateFreePass() {
+    document.getElementById('useFreePassInput').value = '1';
+    var btn = document.getElementById('submitBtn');
+    var fpBtn = document.getElementById('freePassBtn');
+    if (fpBtn) { fpBtn.style.display = 'none'; }
+    btn.textContent = '🎟 Submitting with Free Pass…';
+    btn.style.background = '#f59e0b';
+    btn.style.color = '#000';
+    document.getElementById('orderForm').dispatchEvent(new Event('submit'));
+  }
+
+  async function submitOrder(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    const task = document.getElementById('taskTypeInput').value;
+    if (!task) { showToast('Please select a task first.', 'error'); return; }
+    btn.disabled = true; btn.textContent = 'Submitting…';
+    const fd = new FormData(document.getElementById('orderForm'));
+    fd.append('csrf_token', document.querySelector('meta[name="csrf-token"]').content);
+    if (_vnBlob) {
+      var ext = (_vnBlob.type && _vnBlob.type.indexOf('ogg') !== -1) ? 'ogg' : 'webm';
+      var fname = _vnBlob.name || ('voice_brief.' + ext);
+      fd.append('voice_note', _vnBlob, fname);
+    }
+    try {
+      const res = await fetch('/submit-order', {method:'POST', body:fd});
+      const data = await res.json();
+      if (data.success) {
+        if (data.requires_upfront_payment && data.payment_url) {
+          btn.textContent = 'Redirecting to payment…';
+          showToast(data.message || 'Redirecting to payment…', 'success');
+          setTimeout(() => window.location.href = data.payment_url, 900);
+        } else if (data.free_pass_used) {
+          showToast('🎟 Free Pass used! Order confirmed.', 'success');
+          setTimeout(() => window.location.href = '/client/orders', 1500);
+        } else {
+          showToast(data.message || 'Order placed!', 'success');
+          setTimeout(() => window.location.href = '/client/orders', 2000);
+        }
+      } else {
+        showToast(data.error || 'Something went wrong.', 'error');
+        btn.disabled = false; btn.textContent = 'Submit Order';
+      }
+    } catch(err) {
+      showToast('Network error. Please try again.', 'error');
+      btn.disabled = false; btn.textContent = 'Submit Order';
+    }
+  }
+
+  // Auto-select from URL param
+  // Fetch user order count to show correct payment note
+  fetch('/api/client/orders-status')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data) return;
+      const isReturning = data.orders && data.orders.length > 0;
+      const note = document.getElementById('submitNote');
+      const btn  = document.getElementById('submitBtn');
+      if (isReturning && note) {
+        note.textContent = '💳 Payment required upfront — you will be redirected to PayU after submitting.';
+        note.style.color = 'var(--navy)';
+      }
+    }).catch(() => {});
+
+  const urlSku = new URLSearchParams(window.location.search).get('task');
+  if (urlSku) {
+    const el = document.querySelector('[data-sku="'+urlSku+'"]');
+    if (el) selectSku(urlSku, el);
+  }
+
+  // Dynamic Property Reel pricing based on tier selection
+  var PR_TIER_INFO = {
+    'hook':     { price: '₹999',   breakdown: 'Hook Reel · ~8 sec · 2 Frames · 9:16 for WhatsApp / Instagram' },
+    'standard': { price: '₹1,599', breakdown: 'Standard Reel · ~30 sec · up to 5 Frames · full property walkthrough' },
+    'showcase': { price: '₹2,499', breakdown: 'Showcase Reel · ~60 sec · up to 10 Frames · luxury listing quality' }
+  };
+  document.querySelectorAll('input[name="reel_tier"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      var priceEl = document.getElementById('pr-price-display');
+      var breakdownEl = document.getElementById('pr-price-breakdown');
+      var showcaseNote = document.getElementById('pr-showcase-note');
+      if (!priceEl) return;
+      var info = PR_TIER_INFO[this.value] || PR_TIER_INFO['hook'];
+      priceEl.textContent = info.price;
+      breakdownEl.textContent = info.breakdown;
+      if (showcaseNote) showcaseNote.style.display = (this.value === 'showcase') ? 'block' : 'none';
+      // BUG 8/9 fix: keep ribbon in sync with reel tier price
+      var ribbon = document.getElementById('submitPriceRibbon');
+      if (ribbon && currentSku === 'property_reel') ribbon.textContent = info.price;
+    });
+  });
+
+  // ── Universal drag-drop + paste for all .upload-box elements ──
+  var _lastHoveredBox = null;
+
+  function _injectFilesIntoBox(box, files) {
+    if (!files || files.length === 0) return;
+    var input = box.querySelector('input[type=file]');
+    if (!input) return;
+    // Only accept image files (and pdf for moodboard)
+    var accept = (input.getAttribute('accept') || '').toLowerCase();
+    var filtered = Array.from(files).filter(function(f) {
+      if (accept.indexOf('image/*') > -1 && !f.type.startsWith('image/')) return false;
+      return true;
+    });
+    if (filtered.length === 0) return;
+    var dt = new DataTransfer();
+    if (input.multiple) {
+      // Append to existing files if possible
+      Array.from(input.files || []).forEach(function(f){ dt.items.add(f); });
+    }
+    filtered.forEach(function(f){ dt.items.add(f); });
+    input.files = dt.files;
+    // Trigger UI update
+    if (input.multiple) {
+      var listId = input.getAttribute('onchange') || '';
+      var m = listId.match(/showMultiFile\(this,'([^']+)','([^']+)'\)/);
+      if (m) { showMultiFile(input, m[1], m[2]); }
+      else { box.classList.add('has-file'); }
+    } else {
+      var m2 = (input.getAttribute('onchange') || '').match(/showFile\(this,'([^']+)'/);
+      if (m2) { showFile(input, m2[1]); }
+      else { box.classList.add('has-file'); }
+    }
+    showToast('✓ ' + filtered.length + ' file' + (filtered.length > 1 ? 's' : '') + ' added', 'success');
+  }
+
+  function initUploadBox(box) {
+    if (box._dndInit) return;
+    box._dndInit = true;
+    // Add hint text if not already there
+    if (!box.querySelector('.upload-drag-hint')) {
+      var hint = document.createElement('div');
+      hint.className = 'upload-drag-hint';
+      hint.textContent = 'drag & drop or paste from clipboard';
+      box.appendChild(hint);
+    }
+    box.addEventListener('mouseenter', function() { _lastHoveredBox = box; });
+    box.addEventListener('dragenter', function(e) { e.preventDefault(); box.classList.add('drag-over'); _lastHoveredBox = box; });
+    box.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; box.classList.add('drag-over'); });
+    box.addEventListener('dragleave', function(e) { if (!box.contains(e.relatedTarget)) box.classList.remove('drag-over'); });
+    box.addEventListener('drop', function(e) {
+      e.preventDefault();
+      box.classList.remove('drag-over');
+      var files = e.dataTransfer.files;
+      if (files && files.length) {
+        _injectFilesIntoBox(box, files);
+      } else {
+        // Handle drag of image from browser (dataTransfer.items with kind=file or URL)
+        var items = e.dataTransfer.items;
+        if (items) {
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].kind === 'file') { _injectFilesIntoBox(box, [items[i].getAsFile()]); break; }
+          }
+        }
+      }
+    });
+  }
+
+  function initAllUploadBoxes() {
+    document.querySelectorAll('.upload-box').forEach(initUploadBox);
+  }
+
+  // Paste from clipboard — targets last hovered box
+  document.addEventListener('paste', function(e) {
+    var box = _lastHoveredBox;
+    if (!box) {
+      // fall back to first visible upload box in the active SKU section
+      var active = document.querySelector('.step-section.active .upload-box') || document.querySelector('.upload-box');
+      box = active;
+    }
+    if (!box) return;
+    var items = (e.clipboardData || window.clipboardData).items;
+    var files = [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        var f = items[i].getAsFile();
+        if (f) {
+          // Give it a sensible name
+          var ext = f.type.split('/')[1] || 'png';
+          Object.defineProperty(f, 'name', { value: 'pasted-image-' + Date.now() + '.' + ext });
+          files.push(f);
+        }
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      _injectFilesIntoBox(box, files);
+    }
+  });
+
+  // Patch addVsPhotoRow and addPrPhotoRow to init new boxes after DOM insert
+  var _origAddVsRow = addVsPhotoRow;
+  addVsPhotoRow = function() { _origAddVsRow(); setTimeout(initAllUploadBoxes, 50); };
+  var _origAddPrRow = addPrPhotoRow;
+  addPrPhotoRow = function() { _origAddPrRow(); setTimeout(initAllUploadBoxes, 50); };
+  initAllUploadBoxes();
+</script>
+</body>
+</html>

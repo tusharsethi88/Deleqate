@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Deleqate</title>
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+  /* Admin-wide overrides: full-width layout, larger fonts */
+  .container.page-body { max-width: 100%; padding: 0 1.5rem; }
+  .assign-row { display:flex; align-items:center; gap:0.5rem; }
+  .assign-select { padding:0.35rem 0.75rem; border:2px solid var(--gray-200); border-radius:var(--radius); font-size:0.9375rem; font-weight:600; cursor:pointer; }
+  .tab-bar { display:flex; gap:0; border-bottom:2px solid var(--gray-200); margin-bottom:1.5rem; }
+  .tab { padding:0.75rem 1.5rem; font-weight:600; font-size:1rem; cursor:pointer; color:var(--gray-500); border-bottom:3px solid transparent; margin-bottom:-2px; transition:all 0.15s; }
+  .tab.active { color:var(--navy); border-color:var(--navy); }
+  .tab-panel { display:none; } .tab-panel.active { display:block; }
+  /* Table: prevent unnecessary wrapping on key columns */
+  .table-wrap table th, .table-wrap table td { font-size:0.9375rem; }
+  .table-wrap table th { font-size:0.875rem; white-space:nowrap; }
+  .col-nowrap { white-space:nowrap; }
+
+  /* ── Admin mobile ── */
+  @media(max-width:768px){
+    .container.page-body{ padding:0 .75rem; }
+    .grid-4{ grid-template-columns:1fr 1fr !important; gap:.75rem; }
+    .tab-bar{ overflow-x:auto; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; }
+    .tab{ white-space:nowrap; padding:.75rem 1rem; font-size:.875rem; min-height:44px; }
+    .assign-row{ flex-wrap:wrap; }
+    .assign-select{ width:100%; }
+    .col-nowrap{ white-space:normal; }
+  }
+  @media(max-width:480px){
+    .grid-4{ grid-template-columns:1fr !important; }
+    .stat-card{ padding:1rem; }
+    .stat-value{ font-size:1.5rem; }
+  }
+
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/" class="navbar-brand">Dele<span>qate</span> <span style="font-size:0.8rem;background:var(--gold);color:var(--navy);padding:0.2rem 0.5rem;border-radius:4px;font-weight:800;margin-left:0.5rem;">ADMIN</span></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false" onclick="this.classList.toggle('open');document.querySelector('.navbar-nav').classList.toggle('open');document.body.style.overflow=this.classList.contains('open')?'hidden':'';"><span></span><span></span><span></span></button>
+  <div class="navbar-nav">
+    <a href="{{ url_for('logout') }}" style="font-size:0.8125rem;font-weight:600;color:var(--navy);border:2px solid var(--navy);border-radius:20px;padding:0.35rem 1rem;transition:background 0.2s,color 0.2s;" onmouseover="this.style.background='var(--navy)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">Logout</a>
+  </div>
+</nav>
+<div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
+
+<div class="container page-body">
+  <!-- STATS -->
+  <div class="grid-4 mb-4">
+    <div class="stat-card"><div class="stat-icon gold">📥</div><div><div class="stat-value">{{ stats.pending or 0 }}</div><div class="stat-label">Pending Orders</div></div></div>
+    <div class="stat-card"><div class="stat-icon navy">⚡</div><div><div class="stat-value">{{ stats.in_progress or 0 }}</div><div class="stat-label">In Progress</div></div></div>
+    <div class="stat-card"><div class="stat-icon success">✅</div><div><div class="stat-value">{{ stats.delivered or 0 }}</div><div class="stat-label">Delivered</div></div></div>
+    <div class="stat-card"><div class="stat-icon gold">💰</div><div><div class="stat-value">₹{{ '{:,}'.format(stats.revenue or 0) }}</div><div class="stat-label">Revenue (approved)</div></div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('orders',this)">📋 Orders</div>
+    <div class="tab" onclick="switchTab('pilots',this)">🚀 Pilots</div>
+    <div class="tab" onclick="switchTab('skus',this)">🎛️ SKUs</div>
+    <div class="tab" onclick="switchTab('herovideo',this)">🎬 Hero Video</div>
+    <div class="tab" onclick="switchTab('security',this)">🔒 Security</div>
+  </div>
+
+  <!-- ORDERS TAB -->
+  <div class="tab-panel active" id="tab-orders">
+    <div class="table-wrap">
+      <table class="admin-orders-table">
+        <thead>
+          <tr><th class="col-nowrap">#</th><th class="col-nowrap">SKU / Task</th><th class="col-nowrap">Client</th><th>Summary</th><th class="col-nowrap">Units</th><th class="col-nowrap">Total</th><th class="col-nowrap">Status</th><th class="col-nowrap">SLA / Timing</th><th class="col-nowrap">Assign Pilot</th><th class="col-nowrap">Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for o in orders %}
+          {% set intake = o.intake_data | fromjson %}
+          <tr>
+            <td><strong>#{{ o.id }}</strong></td>
+            <td style="font-weight:600;font-size:1rem;white-space:nowrap;">
+              {{ task_labels.get(o.task, (o.task or 'Order').replace('_',' ').title()) if task_labels else (o.task or 'Order').replace('_',' ').title() }}
+            </td>
+            <td>
+              <div style="font-weight:600;font-size:1rem;white-space:nowrap;">{{ o.client_name or o.name or '—' }}</div>
+              <div style="font-size:0.875rem;color:var(--gray-500);white-space:nowrap;">{{ o.client_phone or o.phone or '—' }}</div>
+            </td>
+            <td class="col-summary">
+              {%- if o.task == 'virtual_staging' -%}{{ intake.room_type or '—' }} · {{ intake.style or '' }}
+              {%- elif o.task == 'property_reel' -%}{{ intake.property_name or '—' }}, {{ intake.location or '' }}
+              {%- elif o.task == 'property_listing' -%}{{ intake.property_type or '—' }} {{ intake.configuration or '' }}
+              {%- elif o.task == 'bg_cleanup' -%}{{ intake.background_type or '—' }} bg
+              {%- elif o.task == 'product_listing' -%}{{ intake.product_name or '—' }} ({{ intake.platform or '' }})
+              {%- elif o.task == 'product_mockup' -%}{{ intake.product_name or '—' }} · {{ intake.scene_setting or '' }}
+              {%- elif o.task == 'instagram_carousel' -%}{{ intake.carousel_topic or '—' }}
+              {%- elif o.task == 'brand_demo_video' -%}{{ intake.brand_name or '—' }} · {{ intake.duration or '' }}
+              {%- elif o.task == 'ai_headshot' -%}{{ intake.attire_style or '—' }} · {{ intake.variations or '1' }} var
+              {%- elif o.task == 'brand_starter_kit' -%}{{ intake.business_name or '—' }} ({{ intake.industry or '' }})
+              {%- elif o.task == 'menu_design' -%}{{ intake.business_name or '—' }} · {{ intake.menu_format or '' }}
+              {%- elif o.task == 'podcast_reel' -%}{{ intake.show_name or intake.episode_topic or '—' }}
+              {%- else -%}{{ intake.space_name or '—' }}{%- endif -%}
+            </td>
+            <td style="text-align:center;">{{ o.render_count or 1 }}</td>
+            <td style="font-weight:700;">₹{{ '{:,}'.format((o.total_price or 0)//100) }}</td>
+            <td><span class="badge badge-{{ o.status or 'pending' }}">{{ (o.status or 'pending').replace('_',' ').title() }}</span></td>
+            <td style="font-size:0.9375rem; line-height: 1.45; white-space:nowrap;">
+              <div style="margin-bottom: 2px;">
+                <span style="color:var(--gray-400); font-weight: 500;">Posted:</span> 
+                <span class="local-time" data-utc="{{ o.created_at }}">—</span>
+              </div>
+              <div style="margin-bottom: 2px;">
+                <span style="color:var(--gray-400); font-weight: 500;">Assigned:</span> 
+                <span class="local-time" data-utc="{{ o.assigned_at }}">Pending</span>
+              </div>
+              <div style="font-weight: 700; color: var(--navy); margin-top: 5px;">
+                <span class="sla-timer" 
+                      data-created="{{ o.created_at }}" 
+                      data-completed="{{ o.completed_at or o.delivered_at or '' }}"
+                      data-status="{{ o.status }}">—</span>
+              </div>
+            </td>
+            <td>
+              {% if o.status == 'pending' %}
+              <div class="assign-row">
+                <select class="assign-select" id="pilot-{{ o.id }}">
+                  <option value="">Select pilot</option>
+                  {% for p in pilots %}
+                  <option value="{{ p.id }}">{{ p.name }}</option>
+                  {% endfor %}
+                </select>
+                <button class="btn btn-primary btn-sm" onclick="assignPilot({{ o.id }})">Assign</button>
+              </div>
+              {% elif o.assigned_pilot_id %}
+                <span style="font-size:0.9375rem;color:var(--gray-600);font-weight:600;white-space:nowrap;">{{ o.pilot_name or '—' }}</span>
+              {% else %}—{% endif %}
+            </td>
+            <td class="actions-cell">
+              <a href="{{ url_for('order_detail', order_id=o.id) }}" class="btn btn-outline btn-sm">View</a>
+              {% if o.status in ('assigned','in_progress','under_review','delivered','submitted','rejected') %}
+              <a href="{{ url_for('pilot_job', order_id=o.id) }}" class="btn btn-outline btn-sm" style="color:var(--navy);">Pilot View</a>
+              {% endif %}
+              {% if o.status in ('under_review', 'submitted') %}
+              <button class="btn btn-success btn-sm" onclick="adminMarkDelivered({{ o.id }})" title="QC passed — release deliverable to client">✓ Pass QC</button>
+              <button class="btn btn-sm" style="background:#FFF0E6;color:#8B3D00;border:1px solid #F0A87A;border-radius:6px;padding:4px 10px;font-size:0.875rem;font-weight:700;cursor:pointer;" onclick="adminRejectToPilot({{ o.id }}, {% if o.first_deliverable %}'{{ url_for('deliverable_file', filename=o.first_deliverable) }}'{% else %}null{% endif %})">✗ Reject to Pilot</button>
+              {% endif %}
+              {% if o.status == 'delivered' %}
+              <button class="btn btn-success btn-sm" onclick="adminApprove({{ o.id }})" title="Client has the work — close this order as complete">✓ Close Order</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PILOTS TAB -->
+  <div class="tab-panel" id="tab-pilots">
+
+    <!-- CREATE PILOT FORM -->
+    <div style="background:var(--white);border-radius:var(--radius-lg);padding:1.5rem;box-shadow:var(--shadow);margin-bottom:1.5rem;border-left:4px solid var(--gold);">
+      <div style="font-weight:700;font-size:1.125rem;color:var(--navy);margin-bottom:1rem;">➕ Add New AI Pilot</div>
+      <form method="POST" action="/admin/create-pilot" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:0.75rem;align-items:end;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+          <label style="font-size:0.875rem;font-weight:700;color:var(--gray-500);display:block;margin-bottom:0.3rem;">Full Name</label>
+          <input type="text" name="name" class="form-control" placeholder="Pilot name" required style="font-size:1rem;">
+        </div>
+        <div>
+          <label style="font-size:0.875rem;font-weight:700;color:var(--gray-500);display:block;margin-bottom:0.3rem;">Email</label>
+          <input type="email" name="email" class="form-control" placeholder="pilot@email.com" required style="font-size:1rem;">
+        </div>
+        <div>
+          <label style="font-size:0.875rem;font-weight:700;color:var(--gray-500);display:block;margin-bottom:0.3rem;">Phone</label>
+          <input type="tel" name="phone" class="form-control" placeholder="9XXXXXXXXX" style="font-size:1rem;">
+        </div>
+        <div>
+          <label style="font-size:0.875rem;font-weight:700;color:var(--gray-500);display:block;margin-bottom:0.3rem;">Password</label>
+          <input type="text" name="password" class="form-control" placeholder="Set login password" required style="font-size:1rem;">
+        </div>
+        <button type="submit" class="btn btn-gold" style="white-space:nowrap;">Create Pilot</button>
+      </form>
+    </div>
+
+    <!-- PILOT LIST -->
+    {% if pilots %}
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Active Jobs</th><th>Done</th><th>Joined</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for p in pilots %}
+          <tr id="pilot-row-{{ p.id }}" style="opacity:{{ '0.5' if p.account_status == 'inactive' else '1' }};">
+            <td>{{ p.id }}</td>
+            <td style="font-weight:600;">{{ p.name }}</td>
+            <td>{{ p.email }}</td>
+            <td>{{ p.phone or '—' }}</td>
+            <td style="text-align:center;">{{ p.active_jobs or 0 }}</td>
+            <td style="text-align:center;">{{ p.done_jobs or 0 }}</td>
+            <td style="font-size:0.9375rem;color:var(--gray-500);">{{ p.created_at[:10] if p.created_at else '—' }}</td>
+            <td>
+              <button id="pilot-toggle-{{ p.id }}"
+                onclick="togglePilotStatus({{ p.id }}, this)"
+                style="font-size:0.8rem;font-weight:700;padding:0.3rem 0.85rem;border-radius:20px;border:none;cursor:pointer;
+                  {% if p.account_status == 'inactive' %}background:#dcfce7;color:#16a34a;{% else %}background:#fee2e2;color:#dc2626;{% endif %}">
+                {{ '✓ Activate' if p.account_status == 'inactive' else '✕ Deactivate' }}
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:2rem;color:var(--gray-500);font-size:1rem;">
+      No pilots yet. Add your first pilot above.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- SKUs TAB -->
+  <div class="tab-panel" id="tab-skus">
+    <div style="font-size:0.9rem;color:var(--gray-500);margin-bottom:1rem;">Toggle SKUs on/off or edit prices and labels without touching code. Changes take effect immediately — no restart needed.</div>
+
+    {% set clusters = skus | groupby('cluster') %}
+    {% for cluster_name, cluster_skus in clusters %}
+    <div style="margin-bottom:1.5rem;">
+      <div style="font-size:0.8rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--gray-400);margin-bottom:0.75rem;">{{ cluster_name }}</div>
+      <div style="display:grid;gap:0.75rem;">
+        {% for sku in cluster_skus %}
+        <div class="sku-admin-card" id="sku-card-{{ sku.task_key }}" style="background:var(--white);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow);display:flex;align-items:center;gap:1rem;border-left:4px solid {{ 'var(--gold)' if sku.is_active else 'var(--gray-300)' }};opacity:{{ '1' if sku.is_active else '0.55' }};transition:all 0.2s;">
+          <!-- Toggle -->
+          <label class="sku-toggle" title="{{ 'Deactivate' if sku.is_active else 'Activate' }} {{ sku.label }}" style="cursor:pointer;flex-shrink:0;">
+            <input type="checkbox" onchange="toggleSku('{{ sku.task_key }}',this)" {{ 'checked' if sku.is_active }} style="display:none;">
+            <div class="toggle-pill {{ 'on' if sku.is_active }}"></div>
+          </label>
+          <!-- Labels + edit -->
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+              <span class="sku-label-display" id="lbl-{{ sku.task_key }}" style="font-weight:700;font-size:1.0625rem;">{{ sku.label }}</span>
+              <span style="font-size:0.8rem;color:var(--gray-400);font-family:monospace;">{{ sku.task_key }}</span>
+              {% if not sku.is_active %}<span style="font-size:0.8rem;background:#f1f5f9;color:var(--gray-500);padding:0.1rem 0.4rem;border-radius:4px;font-weight:600;">INACTIVE</span>{% endif %}
+            </div>
+            {% if sku.note %}<div style="font-size:0.875rem;color:var(--gray-500);margin-top:0.2rem;">{{ sku.note }}</div>{% endif %}
+          </div>
+          <!-- Price display -->
+          <div style="text-align:right;flex-shrink:0;">
+            <div class="sku-price-display" id="price-{{ sku.task_key }}" style="font-weight:800;font-size:1.125rem;color:var(--navy);">₹{{ '{:,}'.format(sku.price_paisa // 100) }}</div>
+            <div style="font-size:0.8rem;color:var(--gray-400);">{{ sku.price_type }} · {{ sku.price_label }}</div>
+          </div>
+          <!-- Edit button -->
+          <button onclick="openSkuEdit('{{ sku.task_key }}','{{ sku.label | replace("'","\\'" ) }}',{{ sku.price_paisa // 100 }},'{{ sku.note | replace("'","\\'") }}')" style="background:none;border:2px solid var(--gray-200);border-radius:var(--radius);padding:0.35rem 0.75rem;font-size:0.875rem;font-weight:600;cursor:pointer;white-space:nowrap;color:var(--gray-600);">✏️ Edit</button>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Edit modal -->
+    <div id="skuEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center;">
+      <div style="background:var(--white);border-radius:var(--radius-lg);padding:2rem;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+        <div style="font-weight:800;font-size:1.125rem;color:var(--navy);margin-bottom:1.25rem;">✏️ Edit SKU</div>
+        <input type="hidden" id="edit-task-key">
+        <div style="margin-bottom:1rem;">
+          <label style="font-size:0.875rem;font-weight:700;color:var(--gray-500);display:block;margin-bottom:0.35rem;">Display Label</label>
+          <input id="edit-label" type="text" class="form-control" placeholder="e.g. Virtual Staging">
+        </div>
+        <div style="margin-bottom:1rem;">
+          <label style="font-size:0.875rem;font-weight:700;color:var(--gray-500);display:block;margin-bottom:0.35rem;">Price (₹)</label>
+          <input id="edit-price" type="number" min="0" step="1" class="form-control" placeholder="e.g. 799">
+          <div style="font-size:0.8rem;color:var(--gray-400);margin-top:0.25rem;">Enter rupees — e.g. 799. For per-image/per-product SKUs, this is the per-unit rate.</div>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <label style="font-size:0.875rem;font-weight:700;color:var(--gray-500);display:block;margin-bottom:0.35rem;">Internal Note (optional)</label>
+          <input id="edit-note" type="text" class="form-control" placeholder="e.g. Seasonal promo rate">
+        </div>
+        <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+          <button onclick="closeSkuEdit()" style="background:none;border:2px solid var(--gray-200);border-radius:var(--radius);padding:0.5rem 1.25rem;font-weight:600;cursor:pointer;">Cancel</button>
+          <button onclick="saveSkuEdit()" class="btn btn-gold" style="padding:0.5rem 1.5rem;">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HERO VIDEO TAB -->
+  <div class="tab-panel" id="tab-herovideo">
+    <div style="max-width:560px;">
+      <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.25rem;">Homepage Hero Video</h3>
+      <p style="font-size:0.875rem;color:var(--gray-500);margin-bottom:1.5rem;">This video replaces the order card on the homepage. Accepted formats: mp4, webm, mov, ogg.</p>
+
+      <!-- Current video preview -->
+      <div id="hv-preview-wrap" style="margin-bottom:1.25rem;{% if not hero_video_url %}display:none;{% endif %}">
+        <p style="font-size:0.8rem;font-weight:600;color:var(--gray-500);margin-bottom:0.5rem;">CURRENT VIDEO</p>
+        <video id="hv-preview" src="{{ hero_video_url or '' }}" controls muted
+          style="width:100%;border-radius:10px;box-shadow:var(--shadow);background:#000;max-height:280px;"></video>
+        <button onclick="deleteHeroVideo()" style="margin-top:0.75rem;background:none;border:2px solid #fca5a5;color:#dc2626;border-radius:var(--radius);padding:0.4rem 1rem;font-weight:600;font-size:0.875rem;cursor:pointer;">🗑 Remove Video</button>
+      </div>
+
+      <!-- No video placeholder -->
+      <div id="hv-empty" style="{% if hero_video_url %}display:none;{% endif %}margin-bottom:1.25rem;background:#f8fafc;border:2px dashed var(--gray-200);border-radius:10px;padding:2rem;text-align:center;color:var(--gray-400);">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">🎬</div>
+        <div style="font-size:0.9rem;font-weight:600;">No video uploaded yet</div>
+        <div style="font-size:0.8rem;margin-top:0.25rem;">The homepage will show a placeholder until a video is uploaded.</div>
+      </div>
+
+      <!-- Upload form -->
+      <form id="hv-form" onsubmit="uploadHeroVideo(event)">
+        <label style="display:block;font-size:0.875rem;font-weight:600;margin-bottom:0.4rem;">Upload New Video</label>
+        <div style="display:flex;gap:0.75rem;align-items:center;">
+          <input type="file" id="hv-input" accept="video/mp4,video/webm,video/quicktime,video/ogg"
+            style="flex:1;padding:0.5rem;border:1.5px solid var(--gray-200);border-radius:var(--radius);font-size:0.875rem;">
+          <button type="submit" class="btn btn-gold" style="padding:0.5rem 1.25rem;white-space:nowrap;">Upload</button>
+        </div>
+        <div id="hv-msg" style="margin-top:0.6rem;font-size:0.875rem;display:none;"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SECURITY TAB -->
+  <div class="tab-panel" id="tab-security">
+    <div style="max-width:480px;">
+      <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.25rem;">Change Admin Password</h3>
+      <p style="font-size:0.875rem;color:var(--gray-500);margin-bottom:1.5rem;">Update your admin account password. You'll need to log in again after changing it.</p>
+
+      <div id="sec-msg" style="display:none;margin-bottom:1rem;font-size:0.875rem;padding:0.6rem 0.9rem;border-radius:8px;"></div>
+
+      <form id="sec-form" onsubmit="changeAdminPassword(event)">
+        <div class="form-group">
+          <label class="form-label">Current Password</label>
+          <input type="password" id="sec-cur" class="form-control" placeholder="Your current password" required maxlength="128">
+        </div>
+        <div class="form-group" style="margin-top:0.75rem;">
+          <label class="form-label">New Password</label>
+          <input type="password" id="sec-new" class="form-control" placeholder="Min 8 characters" required minlength="8" maxlength="128">
+        </div>
+        <div class="form-group" style="margin-top:0.75rem;">
+          <label class="form-label">Confirm New Password</label>
+          <input type="password" id="sec-confirm" class="form-control" placeholder="Repeat new password" required minlength="8" maxlength="128">
+        </div>
+        <button type="submit" class="btn btn-gold" style="margin-top:1.25rem;padding:0.5rem 1.5rem;">Update Password</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+.toggle-pill { width:42px;height:24px;border-radius:12px;background:var(--gray-300);position:relative;transition:background 0.2s; }
+.toggle-pill::after { content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:left 0.2s; }
+.toggle-pill.on { background:var(--gold); }
+.toggle-pill.on::after { left:21px; }
+</style>
+
+<script>
+// B-07: CSRF helper
+const _csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+function csrfJson(url, body) {
+  return fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': _csrfToken},
+    body: JSON.stringify(body)
+  }).then(r => r.json());
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+function assignPilot(orderId) {
+  const sel = document.getElementById('pilot-'+orderId);
+  if (!sel.value) { toast('Select a pilot first.','error'); return; }
+  csrfJson('/api/admin/assign', {order_id:orderId, pilot_id:parseInt(sel.value)})
+  .then(d=>{ if(d.success){toast('Pilot assigned!','success');setTimeout(()=>location.reload(),1000);} else toast(d.error||'Error','error'); });
+}
+function adminApprove(orderId) {
+  if(!confirm('Close this order as complete? This marks it fully approved and locks pilot payout.')) return;
+  csrfJson('/api/admin/approve', {order_id:orderId})
+  .then(d=>{if(d.success){toast('Order closed — marked complete!','success');setTimeout(()=>location.reload(),1000);}else toast(d.error,'error');});
+}
+function adminMarkDelivered(orderId) {
+  if(!confirm('QC passed — release deliverable to client? The client will receive the download link.')) return;
+  csrfJson('/api/admin/mark-delivered', {order_id:orderId})
+  .then(d=>{if(d.success){toast('QC passed — delivered to client!','success');setTimeout(()=>location.reload(),1000);}else toast(d.error||'Error','error');});
+}
+/* ── Annotation Editor ──────────────────────────────────── */
+var _annOrderId = null;
+var _annCanvas  = null;
+var _annCtx     = null;
+var _annBgImg   = null;
+var _annHistory = [];   // array of ImageData snapshots
+var _annTool    = 'arrow';
+var _annColor   = '#e11d48';
+var _annDrawing = false;
+var _annStartX  = 0, _annStartY  = 0;
+
+function adminRejectToPilot(orderId, imgSrc) {
+  openAnnotationEditor(orderId, imgSrc || null);
+}
+
+function openAnnotationEditor(orderId, imgSrc) {
+  _annOrderId = orderId;
+  document.getElementById('ann-note').value = '';
+  document.getElementById('ann-modal').style.display = 'flex';
+  var canvas = document.getElementById('ann-canvas');
+  _annCanvas = canvas;
+  _annCtx    = canvas.getContext('2d');
+
+  function setupCanvas(w, h, img) {
+    canvas.width  = w || 960;
+    canvas.height = h || 600;
+    _annBgImg = img;
+    _annHistory = [];
+    _annCtx.clearRect(0,0,canvas.width,canvas.height);
+    if (img) _annCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    else {
+      _annCtx.fillStyle = '#1e293b';
+      _annCtx.fillRect(0,0,canvas.width,canvas.height);
+      _annCtx.fillStyle = '#94a3b8';
+      _annCtx.font = '16px Inter,sans-serif';
+      _annCtx.textAlign = 'center';
+      _annCtx.fillText('No image loaded — draw your feedback below', canvas.width/2, canvas.height/2);
+    }
+    annSaveHistory();
+  }
+
+  if (imgSrc) {
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() { setupCanvas(img.naturalWidth > 1200 ? 1200 : img.naturalWidth, Math.round((img.naturalHeight/img.naturalWidth)*(img.naturalWidth > 1200 ? 1200 : img.naturalWidth)), img); };
+    img.onerror = function() { setupCanvas(960, 600, null); };
+    img.src = imgSrc;
+  } else {
+    setupCanvas(960, 600, null);
+  }
+  annSetTool('arrow');
+}
+
+function closeAnnotationEditor() {
+  document.getElementById('ann-modal').style.display = 'none';
+  _annOrderId = null;
+}
+
+function annSaveHistory() {
+  if (_annHistory.length > 40) _annHistory.shift();
+  _annHistory.push(_annCtx.getImageData(0,0,_annCanvas.width,_annCanvas.height));
+}
+
+function annUndo() {
+  if (_annHistory.length <= 1) return;
+  _annHistory.pop();
+  _annCtx.putImageData(_annHistory[_annHistory.length-1], 0, 0);
+}
+
+function annClear() {
+  _annCtx.clearRect(0,0,_annCanvas.width,_annCanvas.height);
+  if (_annBgImg) _annCtx.drawImage(_annBgImg,0,0,_annCanvas.width,_annCanvas.height);
+  else { _annCtx.fillStyle='#1e293b'; _annCtx.fillRect(0,0,_annCanvas.width,_annCanvas.height); }
+  _annHistory = [];
+  annSaveHistory();
+}
+
+function annSetTool(t) {
+  _annTool = t;
+  document.querySelectorAll('.ann-tool-btn').forEach(function(b){ b.classList.remove('active'); });
+  var btn = document.getElementById('ann-btn-' + t);
+  if (btn) btn.classList.add('active');
+  _annCanvas.style.cursor = (t === 'text') ? 'text' : 'crosshair';
+}
+
+function annSetColor(c) {
+  _annColor = c;
+  document.querySelectorAll('.ann-color-swatch').forEach(function(s){ s.classList.remove('active'); });
+  var sw = document.querySelector('.ann-color-swatch[data-color="'+c+'"]');
+  if (sw) sw.classList.add('active');
+}
+
+function annDrawArrow(ctx, x1,y1,x2,y2,color,lw) {
+  var hw = lw*3, hl = lw*9;
+  var angle = Math.atan2(y2-y1, x2-x1);
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = lw; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2 - Math.cos(angle)*hl, y2 - Math.sin(angle)*hl);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - Math.cos(angle-0.45)*hl, y2 - Math.sin(angle-0.45)*hl);
+  ctx.lineTo(x2 - Math.cos(angle+0.45)*hl, y2 - Math.sin(angle+0.45)*hl);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+(function setupAnnCanvas() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var canvas = document.getElementById('ann-canvas');
+    if (!canvas) return;
+    var previewData = null;
+
+    canvas.addEventListener('mousedown', function(e) {
+      if (!_annCanvas) return;
+      var r = canvas.getBoundingClientRect();
+      var sx = (e.clientX - r.left) * (canvas.width / r.width);
+      var sy = (e.clientY - r.top)  * (canvas.height / r.height);
+      _annStartX = sx; _annStartY = sy;
+
+      if (_annTool === 'text') {
+        var txt = prompt('Enter text:');
+        if (txt) {
+          _annCtx.save();
+          _annCtx.font = 'bold 22px Inter,sans-serif';
+          _annCtx.fillStyle = _annColor;
+          _annCtx.strokeStyle = 'rgba(0,0,0,0.6)';
+          _annCtx.lineWidth = 3;
+          _annCtx.strokeText(txt, sx, sy);
+          _annCtx.fillText(txt, sx, sy);
+          _annCtx.restore();
+          annSaveHistory();
+        }
+        return;
+      }
+      _annDrawing = true;
+      previewData = _annCtx.getImageData(0,0,canvas.width,canvas.height);
+    });
+
+    canvas.addEventListener('mousemove', function(e) {
+      if (!_annDrawing || !previewData) return;
+      var r = canvas.getBoundingClientRect();
+      var cx = (e.clientX - r.left) * (canvas.width / r.width);
+      var cy = (e.clientY - r.top)  * (canvas.height / r.height);
+      _annCtx.putImageData(previewData, 0, 0);
+
+      if (_annTool === 'arrow') {
+        annDrawArrow(_annCtx, _annStartX, _annStartY, cx, cy, _annColor, 3);
+      } else if (_annTool === 'rect') {
+        _annCtx.save();
+        _annCtx.strokeStyle = _annColor; _annCtx.lineWidth = 3;
+        _annCtx.strokeRect(_annStartX, _annStartY, cx-_annStartX, cy-_annStartY);
+        _annCtx.restore();
+      } else if (_annTool === 'pen') {
+        _annCtx.save();
+        _annCtx.strokeStyle = _annColor; _annCtx.lineWidth = 3; _annCtx.lineCap = 'round';
+        _annCtx.beginPath(); _annCtx.moveTo(_annStartX, _annStartY);
+        _annCtx.lineTo(cx, cy); _annCtx.stroke();
+        _annCtx.restore();
+        _annStartX = cx; _annStartY = cy;
+        previewData = _annCtx.getImageData(0,0,canvas.width,canvas.height);
+      } else if (_annTool === 'circle') {
+        var rx = Math.abs(cx-_annStartX)/2, ry = Math.abs(cy-_annStartY)/2;
+        var ex = _annStartX + (cx-_annStartX)/2, ey = _annStartY + (cy-_annStartY)/2;
+        _annCtx.save();
+        _annCtx.strokeStyle = _annColor; _annCtx.lineWidth = 3;
+        _annCtx.beginPath(); _annCtx.ellipse(ex,ey,rx,ry,0,0,2*Math.PI);
+        _annCtx.stroke(); _annCtx.restore();
+      }
+    });
+
+    function annMouseUp(e) {
+      if (!_annDrawing) return;
+      _annDrawing = false;
+      previewData = null;
+      annSaveHistory();
+    }
+    canvas.addEventListener('mouseup', annMouseUp);
+    canvas.addEventListener('mouseleave', annMouseUp);
+  });
+})();
+
+async function annSubmitRejection() {
+  if (!_annOrderId) return;
+  var note = document.getElementById('ann-note').value.trim();
+  if (!note) { alert('Please add a rejection note for the pilot.'); return; }
+  var btn = document.getElementById('ann-submit-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  var imgB64 = _annCanvas ? _annCanvas.toDataURL('image/png') : '';
+  try {
+    var d = await csrfJson('/api/admin/save-annotation', {order_id: _annOrderId, note: note, image_b64: imgB64});
+    if (d.success) {
+      toast('Rejected with feedback — sent to pilot.', 'warning');
+      closeAnnotationEditor();
+      setTimeout(()=>location.reload(), 1000);
+    } else {
+      toast(d.error || 'Error saving annotation', 'error');
+      btn.disabled = false; btn.textContent = 'Send Rejection';
+    }
+  } catch(err) {
+    toast('Network error', 'error');
+    btn.disabled = false; btn.textContent = 'Send Rejection';
+  }
+}
+// ── SKU management ────────────────────────────────────────
+function toggleSku(taskKey, checkbox) {
+  csrfJson('/api/admin/sku/toggle', {task_key: taskKey})
+  .then(d => {
+    if (!d.success) { toast(d.error || 'Error toggling SKU', 'error'); checkbox.checked = !checkbox.checked; return; }
+    const card = document.getElementById('sku-card-' + taskKey);
+    const pill = checkbox.closest('label').querySelector('.toggle-pill');
+    if (d.is_active) {
+      pill.classList.add('on'); card.style.opacity = '1';
+      card.style.borderLeftColor = 'var(--gold)';
+    } else {
+      pill.classList.remove('on'); card.style.opacity = '0.55';
+      card.style.borderLeftColor = 'var(--gray-300)';
+    }
+    toast(d.is_active ? taskKey + ' activated' : taskKey + ' deactivated', d.is_active ? 'success' : 'warning');
+  });
+}
+function openSkuEdit(taskKey, label, priceRs, note) {
+  document.getElementById('edit-task-key').value = taskKey;
+  document.getElementById('edit-label').value = label;
+  document.getElementById('edit-price').value = priceRs;
+  document.getElementById('edit-note').value = note;
+  document.getElementById('skuEditModal').style.display = 'flex';
+}
+function closeSkuEdit() { document.getElementById('skuEditModal').style.display = 'none'; }
+function saveSkuEdit() {
+  const taskKey = document.getElementById('edit-task-key').value;
+  const label   = document.getElementById('edit-label').value.trim();
+  const price   = parseFloat(document.getElementById('edit-price').value);
+  const note    = document.getElementById('edit-note').value.trim();
+  if (!label || isNaN(price) || price < 0) { toast('Fill in a valid label and price.', 'error'); return; }
+  csrfJson('/api/admin/sku/edit', {task_key: taskKey, label, price, note})
+  .then(d => {
+    if (!d.success) { toast(d.error || 'Save failed', 'error'); return; }
+    document.getElementById('lbl-' + taskKey).textContent = d.label;
+    document.getElementById('price-' + taskKey).textContent = '₹' + d.price_paisa / 100;
+    closeSkuEdit();
+    toast('SKU updated — changes live immediately.', 'success');
+  });
+}
+
+// ── Pilot status toggle ───────────────────────────────────
+function togglePilotStatus(pilotId, btn) {
+  csrfJson('/api/admin/pilot/toggle-status', {pilot_id: pilotId})
+  .then(d => {
+    if (!d.ok) { toast(d.error || 'Could not update pilot status', 'error'); return; }
+    toast('Pilot is now ' + d.status + '.', d.status === 'active' ? 'success' : 'warning');
+    setTimeout(() => location.reload(), 800);
+  })
+  .catch(() => toast('Network error', 'error'));
+}
+
+// ── Admin password change ─────────────────────────────────
+function changeAdminPassword(e) {
+  e.preventDefault();
+  const cur = document.getElementById('sec-cur').value;
+  const nw  = document.getElementById('sec-new').value;
+  const cf  = document.getElementById('sec-confirm').value;
+  const msg = document.getElementById('sec-msg');
+  function show(text, ok) {
+    msg.style.display = 'block';
+    msg.style.background = ok ? '#dcfce7' : '#fee2e2';
+    msg.style.color = ok ? '#166534' : '#991b1b';
+    msg.textContent = text;   // M-4: textContent, never innerHTML
+  }
+  if (nw !== cf) { show('New passwords do not match.', false); return; }
+  if (nw.length < 8) { show('Password must be at least 8 characters.', false); return; }
+  csrfJson('/api/admin/change-password', {current_password: cur, new_password: nw})
+  .then(d => {
+    if (!d.ok) { show(d.error || 'Could not change password.', false); return; }
+    show('Password updated. Redirecting to login…', true);
+    setTimeout(() => location.href = '/admin/login', 1500);
+  })
+  .catch(() => show('Network error', false));
+}
+
+// ── Hero video upload / delete ────────────────────────────
+function uploadHeroVideo(e) {
+  e.preventDefault();
+  const input = document.getElementById('hv-input');
+  const msg   = document.getElementById('hv-msg');
+  if (!input.files || !input.files[0]) { toast('Choose a video file first.', 'error'); return; }
+  msg.style.display = 'block';
+  msg.textContent = 'Uploading…';
+  const fd = new FormData();
+  fd.append('video', input.files[0]);
+  fetch('/api/admin/hero-video', {
+    method: 'POST',
+    headers: {'X-CSRFToken': _csrfToken},
+    body: fd
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.ok) { msg.textContent = d.error || 'Upload failed.'; toast(d.error || 'Upload failed', 'error'); return; }
+    msg.textContent = 'Uploaded!';
+    toast('Hero video updated.', 'success');
+    setTimeout(() => location.reload(), 800);
+  })
+  .catch(() => { msg.textContent = 'Network error.'; });
+}
+
+function deleteHeroVideo() {
+  if (!confirm('Remove the homepage hero video?')) return;
+  csrfJson('/api/admin/hero-video/delete', {})
+  .then(d => {
+    if (!d.ok) { toast(d.error || 'Could not remove video', 'error'); return; }
+    toast('Hero video removed.', 'success');
+    setTimeout(() => location.reload(), 800);
+  })
+  .catch(() => toast('Network error', 'error'));
+}
+
+// ── TOAST (M-4: message set via textContent — no HTML injection) ──
+function toast(msg, type) {
+  type = type || 'info';
+  const icons = {success: '✅', error: '⚠️', warning: '⚠️', info: 'ℹ️'};
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  const icon = document.createElement('span');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = icons[type] || 'ℹ️';
+  const text = document.createElement('span');
+  text.textContent = msg;
+  t.appendChild(icon);
+  t.appendChild(text);
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => {
+    t.style.animation = 'fadeOut 0.3s forwards';
+    setTimeout(() => t.remove(), 300);
+  }, 3500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deleqate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f8fafc;font-family:'Inter',sans-serif;}
+  .box{background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.08);padding:2.5rem;width:100%;max-width:380px;}
+  .logo{font-size:1.25rem;font-weight:800;color:#1b1c1c;text-align:center;margin-bottom:2rem;letter-spacing:-0.02em;}
+  .logo span{color:#C5A028;}
+  label{display:block;font-size:0.8rem;font-weight:600;color:#6b7280;margin-bottom:0.3rem;margin-top:1rem;}
+  input{width:100%;padding:0.6rem 0.9rem;border:1.5px solid #e5e7eb;border-radius:8px;font-size:1rem;outline:none;transition:border-color 0.15s;}
+  input:focus{border-color:#C5A028;}
+  .btn{width:100%;margin-top:1.5rem;padding:0.65rem;background:#1b1c1c;color:#fff;border:none;border-radius:8px;font-size:0.9375rem;font-weight:600;cursor:pointer;transition:background 0.2s;}
+  .btn:hover{background:#2e2e2e;}
+  .alert{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:6px;padding:0.6rem 0.9rem;font-size:0.875rem;margin-bottom:1rem;}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">Dele<span>qate</span></div>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="text" name="website" style="display:none;" tabindex="-1" autocomplete="off">
+    <label>Email</label>
+    <input type="email" name="email" required autofocus autocomplete="email" maxlength="254">
+    <label>Password</label>
+    <input type="password" name="password" required autocomplete="current-password" maxlength="128">
+    <button type="submit" class="btn">Sign In</button>
+  </form>
+  <p style="text-align:center;margin-top:1.25rem;font-size:0.8rem;">
+    <a href="{{ url_for('forgot_password', role='admin') }}" style="color:#6b7280;text-decoration:underline;">Forgot password?</a>
+  </p>
+</div>
+</body>
+</html>

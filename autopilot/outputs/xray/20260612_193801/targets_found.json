@@ -1,0 +1,792 @@
+{
+  "Add to Prompt": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/53bb03b1-ae5a-45f8-96a4-f39b4aa5e73b",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "html",
+            "text": "Google Flow - Jun 12, 07:38 PM\n            if (typeof window",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "body",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "script",
+            "text": "{\"props\":{\"pageProps\":{\"session\":{\"user\":{\"name\":\"Deleqate\",",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "shadowDepth": 0,
+            "onScreen": false
+          }
+        ]
+      }
+    ]
+  },
+  "Upload media": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/53bb03b1-ae5a-45f8-96a4-f39b4aa5e73b",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "html",
+            "text": "Google Flow - Jun 12, 07:38 PM\n            if (typeof window",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "body",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "script",
+            "text": "{\"props\":{\"pageProps\":{\"session\":{\"user\":{\"name\":\"Deleqate\",",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "div",
+            "text": "uploadUpload mediafolderCreate Collectionaccount_circleCreat",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1348,
+            "y": 141,
+            "w": 192,
+            "h": 164,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "uploadUpload mediafolderCreate Collectionaccount_circleCreat",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1348,
+            "y": 141,
+            "w": 192,
+            "h": 164,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "uploadUpload media",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1348,
+            "y": 84,
+            "w": 176,
+            "h": 34,
+            "shadowDepth": 0,
+            "onScreen": true
+          }
+        ]
+      }
+    ]
+  },
+  "Search assets": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/53bb03b1-ae5a-45f8-96a4-f39b4aa5e73b",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "html",
+            "text": "Google Flow - Jun 12, 07:38 PM\n            if (typeof window",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "body",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "script",
+            "text": "{\"props\":{\"pageProps\":{\"session\":{\"user\":{\"name\":\"Deleqate\",",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "shadowDepth": 0,
+            "onScreen": false
+          }
+        ]
+      }
+    ]
+  },
+  "Add Media": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/53bb03b1-ae5a-45f8-96a4-f39b4aa5e73b",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "html",
+            "text": "Google Flow - Jun 12, 07:38 PM\n            if (typeof window",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "body",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 38,
+            "w": 1707,
+            "h": 76,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 855,
+            "y": 38,
+            "w": 1663,
+            "h": 76,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "addAdd MediahelpProduct Helpsettings_2View Settingsmore_vert",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1549,
+            "y": 38,
+            "w": 274,
+            "h": 48,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "addAdd MediahelpProduct Helpsettings_2View Settingsmore_vert",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1494,
+            "y": 38,
+            "w": 164,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "addAdd Media",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1428,
+            "y": 38,
+            "w": 32,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "span",
+            "text": "Add Media",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1428,
+            "y": 38,
+            "w": 1,
+            "h": 1,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "script",
+            "text": "{\"props\":{\"pageProps\":{\"session\":{\"user\":{\"name\":\"Deleqate\",",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "shadowDepth": 0,
+            "onScreen": false
+          }
+        ]
+      }
+    ]
+  },
+  "Create": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/53bb03b1-ae5a-45f8-96a4-f39b4aa5e73b",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "html",
+            "text": "Google Flow - Jun 12, 07:38 PM\n            if (typeof window",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "head",
+            "text": "Google Flow - Jun 12, 07:38 PM\n            if (typeof window",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "script",
+            "text": "if (typeof window !== 'undefined') {\n              window.da",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "body",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "What do you want to create?\ufeffadd_2CreateAgentarticle_sparkAge",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 881,
+            "w": 1707,
+            "h": 94,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "What do you want to create?\ufeffadd_2CreateAgentarticle_sparkAge",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 881,
+            "w": 1707,
+            "h": 94,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "What do you want to create?\ufeffadd_2CreateAgentarticle_sparkAge",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 881,
+            "w": 600,
+            "h": 94,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "What do you want to create?\ufeffadd_2CreateAgentarticle_sparkAge",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 881,
+            "w": 600,
+            "h": 94,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "What do you want to create?\ufeffadd_2CreateAgentarticle_sparkAge",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 881,
+            "w": 600,
+            "h": 94,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 854,
+            "y": 864,
+            "w": 582,
+            "h": 36,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 824,
+            "y": 860,
+            "w": 522,
+            "h": 20,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "p",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 824,
+            "y": 860,
+            "w": 506,
+            "h": 20,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "span",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 571,
+            "y": 860,
+            "w": 0,
+            "h": 18,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "span",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 571,
+            "y": 860,
+            "w": 0,
+            "h": 18,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "span",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 832,
+            "y": 860,
+            "w": 522,
+            "h": 20,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "add_2CreateAgentarticle_sparkAgent InstructionstuneSettingsa",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 854,
+            "y": 903,
+            "w": 582,
+            "h": 34,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "add_2CreateAgent",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 615,
+            "y": 903,
+            "w": 104,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "add_2CreateAgent",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 615,
+            "y": 903,
+            "w": 104,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "add_2Create",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 579,
+            "y": 903,
+            "w": 32,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "span",
+            "text": "Create",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 579,
+            "y": 903,
+            "w": 1,
+            "h": 1,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "div",
+            "text": "article_sparkAgent InstructionstuneSettingsarrow_forwardCrea",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1092,
+            "y": 903,
+            "w": 106,
+            "h": 34,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "arrow_forwardCreate",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1129,
+            "y": 903,
+            "w": 32,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "span",
+            "text": "Create",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1129,
+            "y": 903,
+            "w": 1,
+            "h": 1,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "script",
+            "text": "{\"props\":{\"pageProps\":{\"session\":{\"user\":{\"name\":\"Deleqate\",",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "div",
+            "text": "uploadUpload mediafolderCreate Collectionaccount_circleCreat",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1348,
+            "y": 141,
+            "w": 192,
+            "h": 164,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "uploadUpload mediafolderCreate Collectionaccount_circleCreat",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1348,
+            "y": 141,
+            "w": 192,
+            "h": 164,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "folderCreate Collection",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1348,
+            "y": 122,
+            "w": 176,
+            "h": 34,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "account_circleCreate Character",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1348,
+            "y": 160,
+            "w": 176,
+            "h": 34,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "play_moviesCreate Scene",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1348,
+            "y": 198,
+            "w": 176,
+            "h": 34,
+            "shadowDepth": 0,
+            "onScreen": true
+          }
+        ]
+      }
+    ]
+  },
+  "Nano Banana": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/53bb03b1-ae5a-45f8-96a4-f39b4aa5e73b",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "html",
+            "text": "Google Flow - Jun 12, 07:38 PM\n            if (typeof window",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "body",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "script",
+            "text": "{\"props\":{\"pageProps\":{\"session\":{\"user\":{\"name\":\"Deleqate\",",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "shadowDepth": 0,
+            "onScreen": false
+          }
+        ]
+      }
+    ]
+  },
+  "16:9": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/53bb03b1-ae5a-45f8-96a4-f39b4aa5e73b",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "html",
+            "text": "Google Flow - Jun 12, 07:38 PM\n            if (typeof window",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "body",
+            "text": "arrow_backGo Backmore_vertMore optionssearchSearchfilter_lis",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 853,
+            "y": 480,
+            "w": 1707,
+            "h": 960,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "script",
+            "text": "{\"props\":{\"pageProps\":{\"session\":{\"user\":{\"name\":\"Deleqate\",",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0,
+            "shadowDepth": 0,
+            "onScreen": false
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% if client_action == 'paid_upfront' %}Order Confirmed{% else %}Payment Confirmed{% endif %} — Deleqate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--surface-low);padding:1.5rem;">
+<div style="background:var(--white);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);padding:3rem 2.5rem;max-width:500px;width:100%;text-align:center;">
+
+  {% if client_action == 'paid_upfront' %}
+  <!-- ── Returning user: upfront payment confirmed, work not started yet ── -->
+  <div style="font-size:4rem;margin-bottom:1rem;">🎉</div>
+  <h2 style="margin-bottom:0.5rem;">Order Confirmed!</h2>
+  <p style="color:var(--gray-600);margin-bottom:1.5rem;">
+    Payment received for order <strong>#{{ order_id }}</strong>. An AI Pilot will be assigned within
+    <strong>15 minutes</strong> and your delivery is SLA-guaranteed.
+  </p>
+  <div style="background:var(--cream);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:2rem;text-align:left;">
+    <div style="font-weight:700;font-size:0.875rem;color:var(--navy);margin-bottom:0.75rem;">What happens next:</div>
+    <div style="display:flex;flex-direction:column;gap:0.625rem;">
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;">✅ <span><strong>Payment confirmed</strong> — you're all set</span></div>
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;">⚡ <span>AI Pilot assigned within <strong>15 min</strong></span></div>
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;">🎯 <span>Delivery in under 2 hours, SLA guaranteed</span></div>
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;">⬇ <span>Download unlocked immediately on delivery</span></div>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- ── First-time user: post-delivery payment / edit confirmed ── -->
+  <div style="font-size:4rem;margin-bottom:1rem;">✅</div>
+  <h2 style="margin-bottom:0.5rem;">Payment Confirmed!</h2>
+  <p style="color:var(--gray-600);margin-bottom:1.5rem;">
+    {% if client_action == 'pay_edit' %}
+      Payment received for order <strong>#{{ order_id }}</strong>. Your edit request has been sent to the pilot — they will revise and redeliver shortly.
+    {% else %}
+      Payment received for order <strong>#{{ order_id }}</strong>. Your clean files are now unlocked and ready to download.
+    {% endif %}
+  </p>
+  <div style="background:var(--cream);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:2rem;text-align:left;">
+    <div style="font-weight:700;font-size:0.875rem;color:var(--navy);margin-bottom:0.75rem;">What happens next:</div>
+    <div style="display:flex;flex-direction:column;gap:0.625rem;">
+      {% if client_action == 'pay_edit' %}
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;">✏️ <span>Pilot is working on your revision</span></div>
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;">🔔 <span>You'll be notified when the revised delivery is ready</span></div>
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;">⬇ <span>Return to your orders to download when done</span></div>
+      {% else %}
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;">✅ <span><strong>Files unlocked</strong> — download now, no expiry</span></div>
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;">🔒 <span>Clean originals, no watermark</span></div>
+      <div style="display:flex;align-items:center;gap:0.75rem;font-size:0.875rem;">🙏 <span>Thanks for using Deleqate!</span></div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <a href="{{ url_for('client_orders') }}" class="btn btn-primary btn-full" style="margin-bottom:0.75rem;">
+    {% if client_action not in ('pay_download', None) %}
+      Track My Orders
+    {% else %}
+      Go to My Orders &amp; Download
+    {% endif %}
+  </a>
+  <a href="{{ url_for('order_wizard') }}" class="btn btn-outline btn-full">Place Another Order</a>
+  <a href="{{ url_for('logout') }}" class="btn btn-outline btn-full" style="margin-top:0.75rem;background:none;border:2px solid var(--gray-200);color:var(--gray-600);">Logout</a>
+</div>
+<script src="{{ url_for('static', filename='js/mobile.js') }}" defer></script>
+</body>
+</html>

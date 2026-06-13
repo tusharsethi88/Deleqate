@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.env
+.env.*
+
+# Node / frontend build (never push these)
+node_modules/
+frontend/dist/
+frontend/.env.local
+
+# graphify local state (per project CLAUDE.md rules)
+.graphify/branch.json
+.graphify/worktree.json
+.graphify/needs_update
+.graphify/cache/
+
+# Database (never push live DB)
+*.db
+*.sqlite
+*.db-journal
+*.db-wal
+*.db-shm
+deleqate_v2.backup_*.db
+
+# Uploads & deliverables (large files)
+uploads/
+deliverables/
+
+# Secrets & cookies
+cookies.txt
+*.key
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

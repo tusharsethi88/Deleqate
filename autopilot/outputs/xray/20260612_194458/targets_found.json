@@ -1,0 +1,322 @@
+{
+  "Add to Prompt": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/853f2ad0-1cf7-409f-af4a-9c760c5e10d0",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "div",
+            "text": "flow_attach_failed_1781270094.pngImageAdd to Prompt",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 916,
+            "y": 557,
+            "w": 630,
+            "h": 515,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "Add to Prompt",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1039,
+            "y": 557,
+            "w": 384,
+            "h": 515,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "Add to Prompt",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1039,
+            "y": 790,
+            "w": 368,
+            "h": 34,
+            "shadowDepth": 0,
+            "onScreen": true
+          }
+        ]
+      }
+    ]
+  },
+  "Upload media": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/853f2ad0-1cf7-409f-af4a-9c760c5e10d0",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "button",
+            "text": "uploadUpload media",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 535,
+            "y": 798,
+            "w": 120,
+            "h": 34,
+            "shadowDepth": 0,
+            "onScreen": true
+          }
+        ]
+      }
+    ]
+  },
+  "Search assets": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/853f2ad0-1cf7-409f-af4a-9c760c5e10d0",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "input",
+            "text": "",
+            "ariaLabel": "Search assets",
+            "placeholder": "Search assets",
+            "x": 872,
+            "y": 277,
+            "w": 464,
+            "h": 20,
+            "shadowDepth": 0,
+            "onScreen": true
+          }
+        ]
+      }
+    ]
+  },
+  "Add Media": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/853f2ad0-1cf7-409f-af4a-9c760c5e10d0",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "div",
+            "text": "addAdd MediahelpProduct Helpsettings_2View Settingsmore_vert",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1549,
+            "y": 38,
+            "w": 274,
+            "h": 48,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "addAdd MediahelpProduct Helpsettings_2View Settingsmore_vert",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1494,
+            "y": 38,
+            "w": 164,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "addAdd Media",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1428,
+            "y": 38,
+            "w": 32,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "span",
+            "text": "Add Media",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1428,
+            "y": 38,
+            "w": 1,
+            "h": 1,
+            "shadowDepth": 0,
+            "onScreen": false
+          }
+        ]
+      }
+    ]
+  },
+  "Create": {
+    "frames": [
+      {
+        "frame_url": "https://labs.google/fx/tools/flow/project/853f2ad0-1cf7-409f-af4a-9c760c5e10d0",
+        "is_main": true,
+        "hits": [
+          {
+            "tag": "div",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 854,
+            "y": 864,
+            "w": 582,
+            "h": 36,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 824,
+            "y": 860,
+            "w": 522,
+            "h": 20,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "p",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 824,
+            "y": 860,
+            "w": 506,
+            "h": 20,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "span",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 571,
+            "y": 860,
+            "w": 0,
+            "h": 18,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "span",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 571,
+            "y": 860,
+            "w": 0,
+            "h": 18,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "span",
+            "text": "What do you want to create?",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 832,
+            "y": 860,
+            "w": 522,
+            "h": 20,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "add_2CreateAgent",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 615,
+            "y": 903,
+            "w": 104,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "div",
+            "text": "add_2CreateAgent",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 615,
+            "y": 903,
+            "w": 104,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "add_2Create",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 579,
+            "y": 903,
+            "w": 32,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "span",
+            "text": "Create",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 579,
+            "y": 903,
+            "w": 1,
+            "h": 1,
+            "shadowDepth": 0,
+            "onScreen": false
+          },
+          {
+            "tag": "div",
+            "text": "article_sparkAgent InstructionstuneSettingsarrow_forwardCrea",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1092,
+            "y": 903,
+            "w": 106,
+            "h": 34,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "button",
+            "text": "arrow_forwardCreate",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1129,
+            "y": 903,
+            "w": 32,
+            "h": 32,
+            "shadowDepth": 0,
+            "onScreen": true
+          },
+          {
+            "tag": "span",
+            "text": "Create",
+            "ariaLabel": null,
+            "placeholder": null,
+            "x": 1129,
+            "y": 903,
+            "w": 1,
+            "h": 1,
+            "shadowDepth": 0,
+            "onScreen": false
+          }
+        ]
+      }
+    ]
+  },
+  "Nano Banana": {
+    "frames": []
+  },
+  "16:9": {
+    "frames": []
+  }
+}

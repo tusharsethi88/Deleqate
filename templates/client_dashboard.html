@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Orders — Deleqate</title>
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+  .page-wrap { max-width:900px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:2rem; gap:1rem; flex-wrap:wrap; }
+  .page-title { font-size:1.625rem; font-weight:800; color:var(--navy); margin-bottom:0.2rem; }
+  .page-sub { color:var(--gray-500); font-size:0.875rem; }
+
+  /* ── Order card ── */
+  .order-card { background:#FFFFFF; border:1px solid #DDE3EC; border-radius:14px; padding:1.5rem; margin-bottom:1rem; box-shadow:0 1px 6px rgba(26,58,92,0.06); transition:box-shadow 0.2s; cursor:pointer; }
+  .order-card:hover { box-shadow:0 4px 16px rgba(26,58,92,0.1); border-color:#C2D4E8; }
+  .order-card-top { display:flex; align-items:flex-start; gap:1rem; margin-bottom:1.25rem; }
+  .order-num { font-size:0.75rem; font-weight:700; color:#8B9AAB; letter-spacing:0.05em; }
+  .order-task { font-size:1rem; font-weight:700; color:var(--navy); margin-bottom:0.15rem; }
+  .order-summary { font-size:0.8125rem; color:var(--gray-500); }
+  .order-meta { margin-left:auto; text-align:right; flex-shrink:0; }
+  .order-amount { font-size:1.125rem; font-weight:800; color:var(--navy); }
+  .order-date { font-size:0.75rem; color:#8B9AAB; margin-top:0.1rem; }
+
+  /* ── Status timeline (B-15: Safari-safe grid layout) ── */
+  .status-track { display:grid; grid-template-columns:repeat(5, 1fr); align-items:start; margin-bottom:1.25rem; gap:0; }
+  .st-step { display:flex; flex-direction:column; align-items:center; position:relative; }
+  /* connector line drawn as ::before on every step except the first */
+  .st-step + .st-step::before {
+    content:''; position:absolute; top:10px; right:50%; left:-50%;
+    height:2px; background:#DDE3EC; z-index:0;
+  }
+  .st-step.done + .st-step::before,
+  .st-step.active + .st-step::before { background:#1B6B3A; }
+  .st-dot { width:20px; height:20px; border-radius:50%; border:2px solid #DDE3EC; background:#FFFFFF; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; color:#B0BAC9; position:relative; z-index:1; flex-shrink:0; }
+  .st-dot.done { background:#1B6B3A; border-color:#1B6B3A; color:#fff; }
+  .st-dot.active { background:#1A3A5C; border-color:#1A3A5C; color:#fff; box-shadow:0 0 0 4px rgba(26,58,92,0.12); }
+  .st-label { font-size:0.67rem; font-weight:600; color:#B0BAC9; margin-top:5px; text-align:center; line-height:1.3; white-space:nowrap; }
+  .st-label.done { color:#1B6B3A; }
+  .st-label.active { color:var(--navy); font-weight:700; }
+
+  /* ── Status badge ── */
+  .status-pill { display:inline-flex; align-items:center; gap:5px; padding:4px 11px; border-radius:20px; font-size:0.75rem; font-weight:700; letter-spacing:0.03em; }
+  .sp-pending   { background:#FFF8E6; color:#8B6A00; border:1px solid #E8C84A; }
+  .sp-assigned  { background:#EEF4FB; color:#1A3A5C; border:1px solid #C2D8EC; }
+  .sp-in_progress { background:#EEF4FB; color:#1A3A5C; border:1px solid #9DC3E6; }
+  .sp-under_review { background:#FFF0E6; color:#8B3D00; border:1px solid #F0A87A; }
+  .sp-delivered { background:#EBF6F0; color:#1B6B3A; border:1px solid #8FD4AE; }
+  .sp-approved  { background:#E8F5E9; color:#1B5E20; border:1px solid #81C784; }
+  /* B-04: statuses previously unstyled */
+  .sp-submitted { background:#FFF0E6; color:#8B3D00; border:1px solid #F0A87A; }
+  .sp-rejected  { background:#FDECEA; color:#8B1A1A; border:1px solid #F0A0A0; }
+
+  /* ── Actions ── */
+  .order-actions { display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap; }
+  .btn-download { display:inline-flex; align-items:center; gap:5px; background:var(--navy); color:#fff; border:none; border-radius:8px; padding:7px 16px; font-size:0.8125rem; font-weight:700; cursor:pointer; text-decoration:none; }
+  .btn-download:hover { background:#122840; color:#fff; }
+  .btn-approve { display:inline-flex; align-items:center; gap:5px; background:#EBF6F0; color:#1B6B3A; border:1.5px solid #8FD4AE; border-radius:8px; padding:6px 14px; font-size:0.8rem; font-weight:700; cursor:pointer; }
+  .btn-approve:hover { background:#1B6B3A; color:#fff; }
+
+  /* ── Delivered card glow ── */
+  .order-card.card-delivered {
+    border:2px solid #F59E0B;
+    box-shadow:0 0 0 4px rgba(245,158,11,0.12), 0 4px 20px rgba(245,158,11,0.15);
+    animation:pulse-gold 2.2s ease-in-out infinite;
+  }
+  .order-card.card-approved { border:2px solid #1B6B3A; box-shadow:0 0 0 3px rgba(27,107,58,0.08); }
+  @keyframes pulse-gold {
+    0%,100% { box-shadow:0 0 0 4px rgba(245,158,11,0.12), 0 4px 20px rgba(245,158,11,0.12); }
+    50%      { box-shadow:0 0 0 8px rgba(245,158,11,0.22), 0 4px 28px rgba(245,158,11,0.22); }
+  }
+  .delivered-banner { background:linear-gradient(135deg,#FFF8E6,#FFFBF0); border:1.5px solid #F59E0B; border-radius:10px; padding:10px 14px; margin-bottom:12px; display:flex; align-items:center; gap:10px; }
+  .delivered-banner .db-icon { font-size:1.4rem; flex-shrink:0; }
+  .delivered-banner .db-text { font-size:0.825rem; font-weight:700; color:#92400E; flex:1; }
+  .btn-review { display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,#F59E0B,#D97706); color:#fff; border:none; border-radius:9px; padding:10px 22px; font-size:0.9rem; font-weight:800; cursor:pointer; text-decoration:none; letter-spacing:0.01em; box-shadow:0 2px 8px rgba(245,158,11,0.35); transition:all 0.15s; }
+  .btn-review:hover { background:linear-gradient(135deg,#D97706,#B45309); color:#fff; box-shadow:0 4px 14px rgba(245,158,11,0.45); }
+  .btn-view-order { display:inline-flex; align-items:center; gap:5px; background:#F0F4FA; color:#1A3A5C; border:1.5px solid #C2D4E8; border-radius:8px; padding:6px 14px; font-size:0.8rem; font-weight:700; cursor:pointer; text-decoration:none; transition:all 0.15s; }
+  .btn-view-order:hover { background:#1A3A5C; color:#fff; border-color:#1A3A5C; }
+  .btn-edit-order { display:inline-flex; align-items:center; gap:5px; background:#FFF8E6; color:#7A5A00; border:1.5px solid #E8C84A; border-radius:8px; padding:6px 14px; font-size:0.8rem; font-weight:700; cursor:pointer; text-decoration:none; transition:all 0.15s; }
+  .btn-edit-order:hover { background:#E8C84A; color:#1A3A5C; border-color:#E8C84A; }
+
+  /* ── Empty state ── */
+  .empty-state { text-align:center; padding:5rem 2rem; background:#FFFFFF; border-radius:14px; border:1px solid #DDE3EC; }
+
+  /* ── Refresh bar ── */
+  .refresh-bar { display:flex; align-items:center; gap:0.5rem; font-size:0.75rem; color:#8B9AAB; margin-bottom:1rem; }
+  .refresh-dot { width:7px; height:7px; border-radius:50%; background:#8B9AAB; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+  /* ── Client dashboard mobile ── */
+  @media(max-width:768px){
+    .page-wrap{ padding:1rem 1rem 3rem !important; }
+    .page-header{ flex-direction:column; align-items:flex-start; gap:.5rem; }
+    .order-card-top{ flex-wrap:wrap; }
+    .order-meta{ margin-left:0 !important; text-align:left; }
+  }
+  @media(max-width:600px){
+    .status-track-outer{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .status-track{ min-width:440px; }
+    .order-actions{ flex-direction:column; align-items:stretch; }
+    .order-actions a, .order-actions button{ width:100%; justify-content:center; text-align:center; }
+    .st-label{ font-size:.6rem; }
+  }
+  @media(max-width:480px){
+    .page-title{ font-size:1.375rem !important; }
+    .order-card{ padding:1rem; }
+    .order-task{ font-size:.9375rem !important; }
+    .order-amount{ font-size:1rem !important; }
+  }
+
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/" class="navbar-brand">Dele<span>qate</span></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false" onclick="this.classList.toggle('open');document.querySelector('.navbar-nav').classList.toggle('open');document.body.style.overflow=this.classList.contains('open')?'hidden':'';"><span></span><span></span><span></span></button>
+  <div class="navbar-nav">
+    <a href="{{ url_for('order_wizard') }}" class="btn-nav">+ New Order</a>
+    <a href="{{ url_for('logout') }}" style="font-size:0.8125rem;font-weight:600;color:var(--navy);border:2px solid var(--navy);border-radius:20px;padding:0.35rem 1rem;transition:background 0.2s,color 0.2s;" onmouseover="this.style.background='var(--navy)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">Logout</a>
+  </div>
+</nav>
+<div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
+
+<div class="page-wrap">
+  <div class="page-header">
+    <div>
+      <div class="page-title">My Orders</div>
+      <div class="page-sub">Hi {{ current_user.name }} — your Deleqate deliveries, live.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+      <span title="Edit credits let you request revisions on delivered orders"
+            style="display:inline-flex;align-items:center;gap:6px;background:#FFF8E6;border:1.5px solid #E8C84A;color:#7A5A00;border-radius:20px;padding:6px 14px;font-size:0.8125rem;font-weight:700;">
+        <span aria-hidden="true">✦</span> {{ edit_credits or 0 }} edit credit{{ 's' if (edit_credits or 0) != 1 }}
+      </span>
+      <a href="{{ url_for('order_wizard') }}" class="btn btn-gold">+ Place New Order</a>
+    </div>
+  </div>
+
+  {% if orders %}
+  <div class="refresh-bar">
+    <span class="refresh-dot"></span>
+    <span id="refresh-label">Auto-updating every 30s</span>
+  </div>
+
+  {% set STATUS_STAGES = [('pending','With Admin'),('assigned','Assigned'),('in_progress','In Progress'),('under_review','Under Review'),('delivered','Delivered')] %}
+
+  {% for o in orders %}
+  {% set intake = o.intake %}
+  <div class="order-card {% if o.status == 'delivered' %}card-delivered{% elif o.status == 'approved' %}card-approved{% endif %}" id="order-card-{{ o.id }}" onclick="window.location.href='{% if o.status in ('delivered', 'approved') %}/order/{{ o.id }}/preview{% else %}/order/{{ o.id }}{% endif %}'" title="Click to view order">
+    <div class="order-card-top">
+      <div style="flex:1;">
+        <div class="order-num">ORDER #{{ o.id }}</div>
+        <div class="order-task">{{ o.task_label }}</div>
+        <div class="order-summary">
+          {%- if o.task == 'virtual_staging' %}{{ intake.style or 'Virtual staging' }} · 4 rooms
+          {%- elif o.task == 'property_reel' %}{{ intake.property_name or '' }}{% if intake.location %}, {{ intake.location }}{% endif %}
+          {%- elif o.task == 'property_social_card' %}{{ intake.property_name or '3BHK' }} · {{ intake.location or '—' }}
+          {%- elif o.task == 'bg_cleanup' %}{{ o.render_count }} images · {{ intake.background_type or 'white' }} background
+          {%- elif o.task == 'product_listing' %}{{ intake.product_name or '—' }} · {{ intake.platform or 'Amazon' }}
+          {%- elif o.task == 'product_mockup' %}{{ intake.product_name or '—' }} · {{ intake.scene_setting or '' }}
+          {%- elif o.task == 'instagram_carousel' %}{{ intake.carousel_idea or '—' }} · {{ intake.num_slides or '5' }} slides
+          {%- elif o.task == 'brand_demo_video' %}{{ intake.brand_name or '—' }} · {{ intake.duration or '30s' }}
+          {%- elif o.task == 'announcement_pack' %}{{ intake.brand_name or '—' }} · {{ intake.announcement_type or 'Announcement' }}
+          {%- elif o.task == 'brand_starter_kit' %}{{ intake.business_name or '—' }} · {{ intake.industry or '' }}
+          {%- elif o.task == 'menu_design' %}{{ intake.business_name or '—' }} · {{ intake.menu_format or '' }}
+          {%- elif o.task == 'podcast_reel' %}{{ intake.show_name or intake.episode_topic or '—' }}
+          {%- else %}Order #{{ o.id }}{%- endif %}
+        </div>
+      </div>
+      <div class="order-meta">
+        <div class="order-amount">₹{{ '{:,}'.format((o.total_price or 0) // 100) }}</div>
+        <div class="order-date">{{ o.created_at[:10] if o.created_at else '—' }}</div>
+      </div>
+    </div>
+
+    <!-- Status Timeline -->
+    {% set cur_status = o.status or 'pending' %}
+    {% set stage_keys = ['pending','assigned','in_progress','under_review','delivered'] %}
+    {# B-03: approved = fully complete, treat as last stage (index 4) #}
+    {% if cur_status == 'approved' %}
+      {% set cur_idx = 4 %}
+      {% set all_done = true %}
+    {% else %}
+      {% set cur_idx = stage_keys.index(cur_status) if cur_status in stage_keys else 0 %}
+      {% set all_done = false %}
+    {% endif %}
+    <div class="status-track">
+      {% for sk, slabel in STATUS_STAGES %}
+      {% set si = loop.index0 %}
+      {% if all_done or si < cur_idx %}
+        <div class="st-step done">
+          <div class="st-dot done">✓</div>
+          <div class="st-label done">{{ slabel }}</div>
+        </div>
+      {% elif si == cur_idx %}
+        <div class="st-step active">
+          <div class="st-dot active">●</div>
+          <div class="st-label active">{{ slabel }}</div>
+        </div>
+      {% else %}
+        <div class="st-step">
+          <div class="st-dot">{{ si + 1 }}</div>
+          <div class="st-label">{{ slabel }}</div>
+        </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- Actions -->
+    <div class="order-actions">
+      <span class="status-pill sp-{{ cur_status }}">
+        {% if cur_status == 'pending' %}⏳ With Admin
+        {% elif cur_status == 'assigned' %}👤 Assigned
+        {% elif cur_status == 'in_progress' %}🔄 In Progress
+        {% elif cur_status == 'under_review' %}🔍 Under Review
+        {% elif cur_status in ('delivered','approved') %}✅ Delivered
+        {% else %}{{ cur_status | replace('_',' ') | title }}{% endif %}
+      </span>
+
+      {% if cur_status == 'pending' %}
+        <!-- Pending orders — no action link, nothing to preview yet -->
+      {% elif o.status in ('delivered', 'approved') %}
+        <!-- All delivered/approved orders go through the preview page — no raw download links here -->
+        <a href="/order/{{ o.id }}/preview" class="btn-review" onclick="event.stopPropagation()">
+          {% if o.status == 'approved' %}⬇ View &amp; Download{% else %}👁 Review &amp; Approve{% endif %}
+        </a>
+      {% elif o.status == 'delivered' and not o.has_deliverables %}
+        <span style="font-size:0.8rem;color:#8B9AAB;">Deliverable being prepared…</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+  {% else %}
+  <div class="empty-state">
+    <div style="font-size:3.5rem;margin-bottom:1rem;">📋</div>
+    <h3 style="color:var(--navy);margin-bottom:0.5rem;">No orders yet</h3>
+    <p style="margin:0 0 2rem;color:var(--gray-500);">Place your first order — AI results delivered in under 4 hours, from ₹79.</p>
+    <a href="{{ url_for('order_wizard') }}" class="btn btn-gold btn-lg">Place First Order →</a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+// B-07: CSRF token
+const _csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+// ── Auto-refresh every 30s ────────────────────────────────
+const orderStatuses = {};
+{% for o in orders %}
+orderStatuses[{{ o.id }}] = '{{ o.status or "pending" }}';
+{% endfor %}
+
+const STAGE_LABELS = {
+  pending:'⏳ With Admin', assigned:'👤 Assigned',
+  in_progress:'🔄 In Progress', under_review:'🔍 Under Review',
+  delivered:'✅ Delivered', approved:'✅ Approved'
+};
+// B-03: approved maps to the last stage
+const STAGE_KEYS = ['pending','assigned','in_progress','under_review','delivered','approved'];
+
+let refreshTimer = setInterval(pollStatus, 30000);
+
+async function pollStatus() {
+  try {
+    const res = await fetch('/api/client/orders-status');
+    const data = await res.json();
+    let changed = false;
+    data.orders.forEach(o => {
+      if (orderStatuses[o.id] && orderStatuses[o.id] !== o.status) {
+        changed = true;
+        orderStatuses[o.id] = o.status;
+      }
+    });
+    if (changed) {
+      document.getElementById('refresh-label').textContent = 'Status updated — refreshing…';
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      const now = new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'});
+      document.getElementById('refresh-label').textContent = `Auto-updating · last checked ${now}`;
+    }
+  } catch(e) { /* silent */ }
+}
+
+function approveOrder(id) {
+  if (!confirm('Approve this delivery? This releases payment to the pilot.')) return;
+  fetch('/api/client/approve', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': _csrfToken},
+    body: JSON.stringify({order_id: id})
+  }).then(r => r.json()).then(d => {
+    if (d.success) { showToast('Delivery approved!', 'success'); setTimeout(() => location.reload(), 1200); }
+    else showToast(d.error || 'Error', 'error');
+  });
+}
+
+function showToast(msg, type) {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + (type || 'info');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.classList.add('show'), 50);
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 400); }, 4000);
+}
+</script>
+<script src="{{ url_for('static', filename='js/mobile.js') }}" defer></script>
+</body>
+</html>
