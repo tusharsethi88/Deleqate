@@ -7,6 +7,7 @@ for 'logout'/'static', current_user, and get_flashed_messages(). We provide
 those here so the rich workflow renders identically to the old app without a
 React rewrite.
 """
+import json
 import jinja2
 from django.conf import settings
 
@@ -17,6 +18,21 @@ _env = jinja2.Environment(
     loader=jinja2.FileSystemLoader(str(settings.PROJECT_ROOT / 'templates')),
     autoescape=jinja2.select_autoescape(['html', 'xml']),
 )
+
+
+def _fromjson(value):
+    """Custom filter the Flask app registered — parse a JSON string column."""
+    if not value:
+        return {}
+    if isinstance(value, (dict, list)):
+        return value
+    try:
+        return json.loads(value)
+    except (ValueError, TypeError):
+        return {}
+
+
+_env.filters['fromjson'] = _fromjson
 
 
 def _url_for(endpoint, **kw):
