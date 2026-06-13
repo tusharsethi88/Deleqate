@@ -213,8 +213,32 @@ find "$DELIVERABLES_DIR" -type d -exec sudo chmod 755 {} \; 2>/dev/null || true
 find "$DELIVERABLES_DIR" -type f -exec sudo chmod 644 {} \; 2>/dev/null || true
 log "✓ Permissions fixed"
 
-# ── Step 7: Restart Gunicorn ─────────────────────────────────────────────────
-log "--- Step 7: Restarting Gunicorn ---"
+# ── Step 7: Install & restart Gunicorn ───────────────────────────────────────
+log "--- Step 7: Setting up Gunicorn service ---"
+
+# Install nginx if not already present (needed for Step 8)
+if ! command -v nginx &>/dev/null; then
+  log "--- Installing nginx ---"
+  sudo apt-get update -qq
+  sudo apt-get install -y nginx
+  log "✓ nginx installed"
+fi
+
+# Install / update the systemd service file from the repo
+SERVICE_SRC="$APP_DIR/deploy/deleqate.service"
+SERVICE_DST="/etc/systemd/system/deleqate.service"
+if [ -f "$SERVICE_SRC" ]; then
+  if ! diff -q "$SERVICE_SRC" "$SERVICE_DST" &>/dev/null 2>&1; then
+    sudo cp "$SERVICE_SRC" "$SERVICE_DST"
+    sudo systemctl daemon-reload
+    sudo systemctl enable "$BACKEND_SERVICE"
+    log "✓ Systemd service file installed/updated and enabled"
+  fi
+else
+  log "✗ ERROR: $SERVICE_SRC not found in repo"
+  exit 1
+fi
+
 sudo systemctl restart "$BACKEND_SERVICE"
 sleep 2
 
