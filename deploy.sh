@@ -253,31 +253,31 @@ fi
 # ── Step 8: Sync nginx config + reload (no downtime) ────────────────────────
 log "--- Step 8: Syncing nginx config and reloading ---"
 
-CERT_PATH="/etc/letsencrypt/live/deleqate.com/fullchain.pem"
+# Always install/update the nginx config from the repo
+sudo cp "$APP_DIR/deploy/nginx-deleqate.conf" /etc/nginx/conf.d/deleqate.conf
 
-if [ -f "$CERT_PATH" ]; then
-    # SSL certs exist — safe to copy full HTTPS config from repo
-    sudo cp "$APP_DIR/deploy/nginx-deleqate.conf" /etc/nginx/conf.d/deleqate.conf
-    if [ -f /etc/nginx/sites-enabled/default ]; then
-        log "Disabling default Nginx site configuration..."
-        sudo rm -f /etc/nginx/sites-enabled/default
-    fi
-    if sudo nginx -t 2>/dev/null; then
-        sudo systemctl reload nginx
-        log "✓ Nginx config synced (HTTPS) and reloaded"
-    else
-        log "✗ ERROR: nginx config test failed. Showing errors:"
-        sudo nginx -t
-        log "  Fix deploy/nginx-deleqate.conf and redeploy, or check: sudo nginx -t"
-        exit 1
-    fi
-else
-    # SSL certs NOT found — skip nginx copy to avoid breaking the live site
-    log "⚠ SSL certs not found at $CERT_PATH — skipping nginx config update"
-    log "  Site may still be running on HTTP. To enable HTTPS, run:"
-    log "  sudo certbot --nginx -d deleqate.com -d www.deleqate.com -d api.deleqate.com"
-    log "  Then redeploy: bash deploy.sh"
+# Disable the default site so it doesn't conflict
+if [ -f /etc/nginx/sites-enabled/default ]; then
+    log "Disabling default Nginx site configuration..."
+    sudo rm -f /etc/nginx/sites-enabled/default
+fi
+
+if sudo nginx -t 2>/dev/null; then
     sudo systemctl reload nginx
+    log "✓ Nginx config synced and reloaded"
+else
+    log "✗ ERROR: nginx config test failed. Showing errors:"
+    sudo nginx -t
+    log "  Fix deploy/nginx-deleqate.conf and redeploy, or check: sudo nginx -t"
+    exit 1
+fi
+
+# Remind about SSL if certs are not yet provisioned
+CERT_PATH="/etc/letsencrypt/live/deleqate.com/fullchain.pem"
+if [ ! -f "$CERT_PATH" ]; then
+    log "⚠ SSL certs not found — site is running on HTTP only."
+    log "  To enable HTTPS, run:"
+    log "  sudo certbot --nginx -d deleqate.com -d www.deleqate.com -d api.deleqate.com"
 fi
 
 # ── Done ────────────────────────────────────────────────================─────
