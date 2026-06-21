@@ -1298,6 +1298,7 @@ input, select, textarea, button {
   /* ── Navbar ── */
   .navbar { height: 60px; padding: 0 1rem; }
   .navbar-brand { font-size: 1.125rem; }
+  .navbar-brand img, .navbar-brand video { height: 40px; }
   .navbar-nav { top: 60px; }
 
   /* ── Hero ── */

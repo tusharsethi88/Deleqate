@@ -311,7 +311,7 @@ export default function Home({ session }) {
 
       {/* NAVBAR */}
       <nav className="navbar">
-        <Link to="/" className="navbar-brand"><video src="/img/logo.mp4" autoPlay loop muted playsInline /></Link>
+        <Link to="/" className="navbar-brand"><img src="/img/logo.png" alt="Delegate" /></Link>
         <button className={`nav-toggle ${navOpen ? 'open' : ''}`} aria-label="Open menu" aria-expanded={navOpen} onClick={() => setNavOpen(o => !o)}>
           <span></span><span></span><span></span>
         </button>
