@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Failed — Deleqate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+  body { display:flex; align-items:center; justify-content:center; min-height:100vh;
+         background:var(--surface-low); padding:1.5rem; }
+  .card { background:var(--white); border-radius:var(--radius-xl); box-shadow:var(--shadow-lg);
+          padding:3rem 2.5rem; max-width:460px; width:100%; text-align:center; }
+  .icon { font-size:3.5rem; margin-bottom:1rem; }
+  .error-box { background:#fff5f5; border:1px solid #fed7d7; border-radius:var(--radius-lg);
+               padding:1rem 1.25rem; margin:1.25rem 0 2rem; font-size:0.875rem; color:#c53030; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">❌</div>
+  <h2 style="margin-bottom:0.5rem;">Payment Not Completed</h2>
+  <p style="color:var(--gray-600);font-size:0.9rem;margin-bottom:0.5rem;">
+    No money was charged. You can try again — your order is saved.
+  </p>
+
+  {% if error %}
+  <div class="error-box">{{ error }}</div>
+  {% endif %}
+
+  {% if order_id %}
+  <p style="color:var(--gray-400);font-size:0.8rem;margin-bottom:1.5rem;">Order #{{ order_id }} · Status: pending</p>
+  {% endif %}
+
+  <div style="display:flex;flex-direction:column;gap:0.75rem;">
+    {% if order_id %}
+    <a href="{{ url_for('payment_initiate', order_id=order_id) }}" class="btn btn-primary">
+      Try Payment Again
+    </a>
+    {% endif %}
+    <a href="{{ url_for('client_orders') }}" class="btn btn-outline">
+      View My Orders
+    </a>
+    <a href="https://wa.me/{{ support_whatsapp | default('917011989292') }}?text=Hi%2C+I+had+a+payment+issue+for+Order+%23{{ order_id or '' }}"
+       class="btn" style="background:var(--cream);color:var(--navy);" target="_blank">
+      💬 WhatsApp Support
+    </a>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/mobile.js') }}" defer></script>
+</body>
+</html>

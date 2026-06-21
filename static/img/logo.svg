@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" width="100%" height="100%">
+  <!-- D (Left) -->
+  <path d="M30,25 L50,25 C62,25 70,32 70,44 C70,55 62,63 50,63 L38,63 L38,68 L30,68 Z" fill="none" stroke="#1E2A39" stroke-width="5" stroke-linejoin="round" />
+  <!-- Lowercase d (Right) -->
+  <path d="M110,68 L110,35 M110,50 C100,50 92,57 92,68 C92,79 100,86 110,86 L118,86 L118,25" fill="none" stroke="#1E2A39" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" />
+  <!-- Chip inside D -->
+  <rect x="42" y="38" width="12" height="12" rx="2" fill="#F5F8FA" stroke="#9DB4C6" stroke-width="2" />
+  <!-- Chip pins -->
+  <line x1="48" y1="35" x2="48" y2="38" stroke="#9DB4C6" stroke-width="2" />
+  <line x1="48" y1="50" x2="48" y2="53" stroke="#9DB4C6" stroke-width="2" />
+  <line x1="39" y1="44" x2="42" y2="44" stroke="#9DB4C6" stroke-width="2" />
+  <line x1="54" y1="44" x2="57" y2="44" stroke="#9DB4C6" stroke-width="2" />
+  <!-- Connecting wave/helix -->
+  <path d="M54,63 C66,63 80,45 92,44 C104,43 110,50 110,50" fill="none" stroke="#9DB4C6" stroke-width="4.5" stroke-linecap="round" />
+  <path d="M48,68 C62,68 76,50 88,49 C100,48 106,53 106,53" fill="none" stroke="#1E2A39" stroke-width="3" stroke-linecap="round" />
+</svg>

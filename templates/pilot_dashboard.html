@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>{% if rejected_jobs %}({{ rejected_jobs|length }}) Action Required · {% endif %}Pilot Dashboard — Deleqate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  .rejected-banner { background:#FEF2F2; border:2px solid #F87171; border-radius:12px; padding:14px 20px; margin-bottom:1.5rem; display:flex; align-items:center; gap:14px; }
+  .rejected-banner .bell { font-size:1.75rem; flex-shrink:0; animation: ring 1.2s ease infinite; }
+  @keyframes ring { 0%,100%{transform:rotate(0)} 15%{transform:rotate(12deg)} 30%{transform:rotate(-10deg)} 45%{transform:rotate(8deg)} 60%{transform:rotate(-6deg)} 75%{transform:rotate(4deg)} }
+  .rejected-card { background:#FFF5F5; border:2px solid #F87171; border-radius:12px; margin-bottom:1rem; overflow:hidden; }
+  .rejected-card-header { background:#FEE2E2; padding:12px 18px; display:flex; align-items:center; justify-content:space-between; }
+  .rejected-card-header .job-id { font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:#991B1B; }
+  .rejected-card-header .job-title { font-weight:700; font-size:0.95rem; color:#7F1D1D; margin-top:2px; }
+  .rejected-card-body { padding:14px 18px; }
+  .qc-note-box { background:#fff; border:1.5px solid #FCA5A5; border-radius:8px; padding:12px 14px; margin-bottom:12px; }
+  .qc-note-box .qc-note-label { font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:#DC2626; margin-bottom:4px; }
+  .qc-note-box .qc-note-text { font-size:0.875rem; color:#1a1a1a; line-height:1.55; white-space:pre-wrap; }
+  .btn-fix { background:#DC2626; color:#fff; border:none; border-radius:8px; padding:8px 20px; font-size:0.875rem; font-weight:700; cursor:pointer; text-decoration:none; display:inline-block; }
+  .btn-fix:hover { background:#B91C1C; color:#fff; }
+  /* Clickable stat cards */
+  .stat-card { cursor:pointer; transition:transform 0.15s, box-shadow 0.2s; }
+  .stat-card:hover { transform:translateY(-2px); box-shadow:0 4px 18px rgba(0,0,0,0.13); }
+  .stat-card-active { box-shadow:0 0 0 3px var(--gold,#f5a623) !important; transform:translateY(-1px); }
+  .stat-card .filter-hint { font-size:0.65rem; color:var(--gray-400,#9CA3AF); margin-top:2px; display:block; }
+  .section-highlight { border-left:4px solid var(--gold,#f5a623); border-radius:0 12px 12px 0; padding-left:8px; transition:border-color 0.3s; }
+
+  /* ── Pilot dashboard mobile ── */
+  @media(max-width:768px){
+    .container.page-body{ padding:0 1rem; }
+  }
+  @media(max-width:600px){
+    .rejected-banner{ flex-direction:column; gap:8px; text-align:center; }
+    .rejected-card-header{ flex-direction:column; align-items:flex-start; gap:4px; }
+  }
+  @media(max-width:480px){
+    .grid-4{ grid-template-columns:1fr 1fr !important; }
+    .stat-card{ padding:.875rem !important; }
+    .stat-value{ font-size:1.375rem !important; }
+  }
+
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="/" class="navbar-brand"><video src="{{ url_for('static', filename='img/logo.mp4') }}" autoplay loop muted playsinline></video></a>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false" onclick="this.classList.toggle('open');document.querySelector('.navbar-nav').classList.toggle('open');document.body.style.overflow=this.classList.contains('open')?'hidden':'';"><span></span><span></span><span></span></button>
+  <div class="navbar-nav">
+    <span style="color:var(--gray-600);font-size:0.875rem;font-weight:500;">AI Pilot: {{ current_user.name }}</span>
+    <a href="{{ url_for('logout') }}" style="font-size:0.8125rem;font-weight:600;color:var(--navy);border:2px solid var(--navy);border-radius:20px;padding:0.35rem 1rem;transition:background 0.2s,color 0.2s;" onmouseover="this.style.background='var(--navy)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">Logout</a>
+  </div>
+</nav>
+<div class="container page-body">
+  <div class="flex-between mb-4">
+    <div>
+      <h2>My Jobs</h2>
+      <p>Jobs assigned to you. Execute each one in the platform — no external docs needed.</p>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="grid-4 mb-4">
+    <div class="stat-card" id="stat-active" onclick="filterSection('active')" title="Click to show active jobs">
+      <div class="stat-icon navy">🔥</div>
+      <div>
+        <div class="stat-value">{{ active_count or 0 }}</div>
+        <div class="stat-label">Active Jobs</div>
+        <span class="filter-hint">click to filter</span>
+      </div>
+    </div>
+    <div class="stat-card" id="stat-completed" onclick="filterSection('completed')" title="Click to show completed jobs">
+      <div class="stat-icon success">✅</div>
+      <div>
+        <div class="stat-value">{{ done_count or 0 }}</div>
+        <div class="stat-label">Completed</div>
+        <span class="filter-hint">click to filter</span>
+      </div>
+    </div>
+    <div class="stat-card" id="stat-earned" onclick="filterSection('completed')" title="Click to see completed jobs">
+      <div class="stat-icon gold">💰</div>
+      <div>
+        <div class="stat-value">₹{{ '{:,}'.format(earnings or 0) }}</div>
+        <div class="stat-label">Total Earned</div>
+        <span class="filter-hint">click to filter</span>
+      </div>
+    </div>
+    <div class="stat-card" id="stat-rating">
+      <div class="stat-icon navy">⭐</div>
+      <div>
+        <div class="stat-value">{{ rating or '—' }}</div>
+        <div class="stat-label">Avg Rating</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REJECTION NOTIFICATION BANNER ── -->
+  {% if rejected_jobs %}
+  <div class="rejected-banner">
+    <div class="bell">🔔</div>
+    <div>
+      <div style="font-weight:800;font-size:1rem;color:#991B1B;">{{ rejected_jobs|length }} job{{ 's' if rejected_jobs|length != 1 }} rejected — action required</div>
+      <div style="font-size:0.8125rem;color:#7F1D1D;margin-top:2px;">Admin has reviewed and sent back your submission with comments. Read the note carefully, fix the issue, and resubmit.</div>
+    </div>
+  </div>
+
+  <!-- ── REJECTED JOBS ── -->
+  <h3 style="margin-bottom:0.75rem;color:#DC2626;">⚠ Needs Fixing</h3>
+  {% for o in rejected_jobs %}
+  {% set intake = o.intake_data | fromjson %}
+  <div class="rejected-card">
+    <div class="rejected-card-header">
+      <div>
+        <div class="job-id">Job #{{ o.id }} · Rejected</div>
+        <div class="job-title">
+          {{ task_labels.get(o.task, (o.task or 'Order').replace('_',' ').title()) if task_labels else (o.task or 'Order').replace('_',' ').title() }}
+          —
+          {%- if o.task == 'virtual_staging' %} {{ intake.room_type or 'Room' }} · {{ intake.style or '' }}
+          {%- elif o.task == 'property_reel' %} {{ intake.property_name or intake.location or 'Property' }}
+          {%- elif o.task == 'property_listing' %} {{ intake.property_type or '' }} {{ intake.configuration or '' }}
+          {%- elif o.task == 'bg_cleanup' %} {{ o.render_count }} images
+          {%- elif o.task == 'product_listing' %} {{ intake.product_name or 'Product' }}
+          {%- elif o.task == 'product_mockup' %} {{ intake.product_name or 'Product' }}
+          {%- elif o.task == 'instagram_carousel' %} {{ intake.carousel_topic or 'Carousel' }}
+          {%- elif o.task == 'brand_demo_video' %} {{ intake.brand_name or 'Brand' }}
+          {%- elif o.task == 'ai_headshot' %} {{ intake.attire_style or 'Headshot' }}
+          {%- elif o.task == 'brand_starter_kit' %} {{ intake.business_name or 'Business' }}
+          {%- elif o.task == 'menu_design' %} {{ intake.business_name or 'Business' }}
+          {%- elif o.task == 'podcast_reel' %} {{ intake.show_name or intake.episode_topic or 'Podcast' }}
+          {%- else %} Order{%- endif %}
+        </div>
+      </div>
+      <a href="{{ url_for('pilot_job', order_id=o.id) }}" class="btn-fix">Fix &amp; Resubmit →</a>
+    </div>
+    <div class="rejected-card-body">
+      <div class="qc-note-box">
+        <div class="qc-note-label">Admin Feedback</div>
+        <div class="qc-note-text">{{ o.qc_notes or 'No specific comment left — check the deliverable and resubmit with a corrected file.' }}</div>
+      </div>
+      <div style="font-size:0.8rem;color:#9CA3AF;">{{ o.render_count }} unit(s) · ₹{{ '{:,}'.format((o.pilot_payout or 0) // 100) }} payout · Fix and resubmit ASAP to protect your rating.</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.78rem; color: #9CA3AF; margin-top: 0.5rem; line-height: 1.4;">
+        <div><strong>Posted (IST):</strong> <span class="local-time" data-utc="{{ o.created_at }}">—</span></div>
+        <div><strong>Assigned (IST):</strong> <span class="local-time" data-utc="{{ o.assigned_at }}">Pending</span></div>
+        <div style="font-weight: 700; color: #E53E3E;"><strong>Elapsed:</strong> <span class="sla-timer" data-created="{{ o.created_at }}" data-completed="{{ o.completed_at or o.delivered_at or '' }}" data-status="{{ o.status }}">—</span></div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  <div style="margin-bottom:2rem;"></div>
+  {% endif %}
+
+  <!-- ACTIVE JOBS -->
+  <div id="section-active">
+  <h3 style="margin-bottom:1rem;">Active Jobs</h3>
+  {% if active_jobs %}
+  <div style="display:flex;flex-direction:column;gap:0.875rem;margin-bottom:2rem;">
+    {% for o in active_jobs %}
+    {% set intake = o.intake_data | fromjson %}
+    <div class="card" style="border-left:4px solid var(--gold);">
+      <div class="card-body" style="display:flex;align-items:center;gap:1.5rem;">
+        <div style="flex:1;">
+          <div style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--gray-400);">Job #{{ o.id }}</div>
+          <div style="font-weight:700;font-size:1rem;color:var(--navy);margin-top:0.2rem;">
+            {{ task_labels.get(o.task, (o.task or 'Order').replace('_',' ').title()) if task_labels else (o.task or 'Order').replace('_',' ').title() }}
+            —
+            {%- if o.task == 'virtual_staging' %} {{ intake.room_type or 'Room' }} · {{ intake.style or '' }}
+            {%- elif o.task == 'property_reel' %} {{ intake.property_name or intake.location or 'Property' }}
+            {%- elif o.task == 'property_listing' %} {{ intake.property_type or '' }} {{ intake.configuration or '' }} · {{ intake.locality or '' }}
+            {%- elif o.task == 'bg_cleanup' %} {{ o.render_count }} images · {{ intake.background_type or 'white' }} bg
+            {%- elif o.task == 'product_listing' %} {{ intake.product_name or 'Product' }} ({{ intake.platform or '' }})
+            {%- elif o.task == 'product_mockup' %} {{ intake.product_name or 'Product' }} · {{ intake.scene_setting or '' }}
+            {%- elif o.task == 'instagram_carousel' %} {{ intake.carousel_topic or 'Carousel' }}
+            {%- elif o.task == 'brand_demo_video' %} {{ intake.brand_name or 'Brand' }} · {{ intake.duration or '' }}
+            {%- elif o.task == 'ai_headshot' %} {{ intake.attire_style or '' }} · {{ intake.variations or '1' }} variation(s)
+            {%- elif o.task == 'brand_starter_kit' %} {{ intake.business_name or 'Business' }} ({{ intake.industry or '' }})
+            {%- elif o.task == 'menu_design' %} {{ intake.business_name or 'Business' }} · {{ intake.menu_format or '' }}
+            {%- elif o.task == 'podcast_reel' %} {{ intake.show_name or intake.episode_topic or 'Podcast' }}
+            {%- else %} {{ intake.space_name or '' }}{%- endif %}
+          </div>
+          <div style="font-size:0.8125rem;color:var(--gray-500);margin-top:0.25rem;">{{ o.render_count }} unit(s) · ₹{{ '{:,}'.format((o.pilot_payout or 0) // 100) }} payout · SLA: {{ o.deadline or 'ASAP' }}</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 1rem; font-size: 0.78rem; color: var(--gray-500); margin-top: 0.5rem; line-height: 1.4;">
+            <div><strong>Posted (IST):</strong> <span class="local-time" data-utc="{{ o.created_at }}">—</span></div>
+            <div><strong>Assigned (IST):</strong> <span class="local-time" data-utc="{{ o.assigned_at }}">Pending</span></div>
+            <div style="font-weight: 700; color: var(--navy);"><strong>Elapsed:</strong> <span class="sla-timer" data-created="{{ o.created_at }}" data-completed="{{ o.completed_at or o.delivered_at or '' }}" data-status="{{ o.status }}">—</span></div>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <span class="badge badge-{{ o.status or 'pending' }}" style="margin-bottom:0.5rem;display:block;">{{ (o.status or 'pending').replace('_',' ').title() }}</span>
+          <a href="{{ url_for('pilot_execute', order_id=o.id) }}" class="btn btn-gold btn-sm">Execute Job →</a>
+          {% if o.status == 'assigned' %}
+          <button
+            onclick="returnTask({{ o.id }}, this)"
+            style="margin-top:6px;display:block;width:100%;background:#fff;border:1.5px solid #DC2626;color:#DC2626;border-radius:8px;padding:5px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;"
+            title="Return this task to the queue before you begin">
+            ↩ Return Task
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="background:var(--white);border-radius:var(--radius-lg);padding:2.5rem;text-align:center;box-shadow:var(--shadow);margin-bottom:2rem;">
+    <div style="font-size:2.5rem;margin-bottom:0.75rem;">🎉</div>
+    <h4>No active jobs right now</h4>
+    <p style="font-size:0.875rem;margin-top:0.25rem;">You'll get a WhatsApp notification when a new job is assigned to you.</p>
+  </div>
+  {% endif %}
+  </div><!-- /section-active -->
+
+  <!-- COMPLETED JOBS -->
+  <div id="section-completed">
+  {% if completed_jobs %}
+  <h3 style="margin-bottom:1rem;">Completed Jobs</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Task</th><th>Summary</th><th>Units</th><th>Payout</th><th>Completed</th><th>Duration</th></tr></thead>
+      <tbody>
+        {% for o in completed_jobs %}
+        {% set intake = o.intake_data | fromjson %}
+        <tr>
+          <td><strong>#{{ o.id }}</strong></td>
+          <td>{{ task_labels.get(o.task, (o.task or 'Order').replace('_',' ').title()) if task_labels else (o.task or 'Order').replace('_',' ').title() }}</td>
+          <td style="font-size:0.8125rem;color:var(--gray-600);">
+            {%- if o.task == 'virtual_staging' %}{{ intake.room_type or '—' }} · {{ intake.style or '' }}
+            {%- elif o.task == 'property_reel' %}{{ intake.property_name or intake.location or '—' }}
+            {%- elif o.task == 'property_listing' %}{{ intake.property_type or '' }} {{ intake.configuration or '' }}
+            {%- elif o.task == 'bg_cleanup' %}{{ intake.background_type or 'white' }} bg
+            {%- elif o.task == 'product_listing' %}{{ intake.product_name or '—' }}
+            {%- elif o.task == 'product_mockup' %}{{ intake.product_name or '—' }}
+            {%- elif o.task == 'instagram_carousel' %}{{ intake.carousel_topic or '—' }}
+            {%- elif o.task == 'brand_demo_video' %}{{ intake.brand_name or '—' }}
+            {%- elif o.task == 'ai_headshot' %}{{ intake.attire_style or '—' }}
+            {%- elif o.task == 'brand_starter_kit' %}{{ intake.business_name or '—' }}
+            {%- elif o.task == 'menu_design' %}{{ intake.business_name or '—' }}
+            {%- elif o.task == 'podcast_reel' %}{{ intake.show_name or intake.episode_topic or '—' }}
+            {%- else %}{{ intake.space_name or '—' }}{%- endif %}
+          </td>
+          <td>{{ o.render_count }}</td>
+          <td style="font-weight:700;color:var(--success);">₹{{ '{:,}'.format((o.pilot_payout or 0) // 100) }}</td>
+          {# B-12: completed_at only set on approved; fall back to delivered_at for delivered/under_review #}
+          {% set ts = o.completed_at or o.delivered_at %}
+          <td style="font-size:0.8125rem;color:var(--gray-500);" class="local-time" data-utc="{{ ts }}">Color Time</td>
+          <td style="font-size:0.8125rem;font-weight:600;color:var(--navy);" class="sla-timer" data-created="{{ o.created_at }}" data-completed="{{ ts }}" data-status="{{ o.status }}">Duration</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  </div><!-- /section-completed -->
+</div>
+
+<script>
+(function() {
+  let activeFilter = null;
+
+  window.filterSection = function(section) {
+    const sectionActive    = document.getElementById('section-active');
+    const sectionCompleted = document.getElementById('section-completed');
+    const cardActive       = document.getElementById('stat-active');
+    const cardCompleted    = document.getElementById('stat-completed');
+    const cardEarned       = document.getElementById('stat-earned');
+
+    if (activeFilter === section) {
+      // Same card clicked again → reset, show all
+      activeFilter = null;
+      if (sectionActive)    { sectionActive.style.display    = ''; sectionActive.classList.remove('section-highlight'); }
+      if (sectionCompleted) { sectionCompleted.style.display = ''; sectionCompleted.classList.remove('section-highlight'); }
+      [cardActive, cardCompleted, cardEarned].forEach(function(c) { if (c) c.classList.remove('stat-card-active'); });
+    } else {
+      activeFilter = section;
+      // Show only target section
+      if (sectionActive)    { sectionActive.style.display    = (section === 'active')    ? '' : 'none'; }
+      if (sectionCompleted) { sectionCompleted.style.display = (section === 'completed') ? '' : 'none'; }
+
+      // Highlight cards
+      [cardActive, cardCompleted, cardEarned].forEach(function(c) { if (c) c.classList.remove('stat-card-active'); });
+      if (section === 'active'    && cardActive)    cardActive.classList.add('stat-card-active');
+      if (section === 'completed' && cardCompleted) cardCompleted.classList.add('stat-card-active');
+      if (section === 'completed' && cardEarned)    cardEarned.classList.add('stat-card-active');
+
+      // Add highlight class to shown section
+      var shown = section === 'active' ? sectionActive : sectionCompleted;
+      if (shown) {
+        shown.classList.add('section-highlight');
+        shown.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+})();
+
+// ── Timing & SLA Tracker Helpers (Indian Standard Time) ──
+function parseUtcDate(dateStr) {
+  if (!dateStr) return null;
+  let s = dateStr.trim();
+  if (!s.includes('T') && s.includes(' ')) {
+    s = s.replace(' ', 'T');
+  }
+  const tIndex = s.indexOf('T');
+  if (tIndex !== -1) {
+    const timePart = s.substring(tIndex);
+    const hasOffset = timePart.includes('Z') || timePart.includes('+') || timePart.includes('-');
+    if (!hasOffset) {
+      if (dateStr.includes('T')) {
+        s = s + '+05:30';
+      } else {
+        s = s + 'Z';
+      }
+    }
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function formatISTDate(date) {
+  if (!date) return '—';
+  try {
+    return date.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }) + ' IST';
+  } catch (e) {
+    return date.toLocaleString();
+  }
+}
+
+function formatDuration(ms) {
+  if (ms < 0) ms = 0;
+  const totalSecs = Math.floor(ms / 1000);
+  const hrs = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  
+  let parts = [];
+  if (hrs > 0) parts.push(hrs + 'h');
+  if (mins > 0 || hrs > 0) parts.push(mins + 'm');
+  parts.push(secs + 's');
+  return parts.join(' ');
+}
+
+function updateSLATimers() {
+  document.querySelectorAll('.local-time').forEach(el => {
+    if (el.dataset.formatted) return;
+    const date = parseUtcDate(el.dataset.utc);
+    if (date) {
+      el.textContent = formatISTDate(date);
+      el.dataset.formatted = 'true';
+    } else if (el.textContent.trim() === '—' || el.textContent.trim() === '') {
+      el.textContent = 'Pending';
+    }
+  });
+
+  document.querySelectorAll('.sla-timer').forEach(el => {
+    const created = parseUtcDate(el.dataset.created);
+    const completed = parseUtcDate(el.dataset.completed);
+    const status = el.dataset.status;
+    
+    if (!created) {
+      el.textContent = '—';
+      return;
+    }
+    
+    const isFinished = (status === 'delivered' || status === 'approved');
+    const clockSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+    if (isFinished && completed) {
+      const diff = completed.getTime() - created.getTime();
+      el.innerHTML = '<span style="color:#16A34A; font-weight:600;">' + clockSvg + 'Executed in: ' + formatDuration(diff) + '</span>';
+    } else {
+      const diff = Date.now() - created.getTime();
+      el.innerHTML = clockSvg + formatDuration(diff);
+    }
+  });
+}
+
+updateSLATimers();
+setInterval(updateSLATimers, 30000);
+
+function returnTask(orderId, btn) {
+  if (!confirm('Return this task to the queue? You will be unassigned from it.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Returning…';
+  var csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+  fetch('/api/pilot/unassign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+    credentials: 'same-origin',
+    body: JSON.stringify({ order_id: orderId })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.error || 'Could not return task. Please try again.');
+      btn.disabled = false;
+      btn.textContent = '↩ Return Task';
+    }
+  })
+  .catch(function() {
+    alert('Network error. Please try again.');
+    btn.disabled = false;
+    btn.textContent = '↩ Return Task';
+  });
+}
+</script>
+<script>
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+</script>
+</body>
+</html>

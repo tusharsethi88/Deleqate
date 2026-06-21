@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% set lt = login_type if login_type is defined else request.args.get('type','client') %}
+<title>{{ 'Pilot Login' if lt == 'pilot' else 'Customer Sign In' }} — Deleqate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+  .inline-icon { display: inline-flex; align-items: center; justify-content: center; }
+  .inline-icon svg, .inline-icon i { width: 1.1rem; height: 1.1rem; vertical-align: middle; margin-right: 0.35rem; }
+  body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--surface-low);}
+  .auth-box{background:var(--white);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);padding:2.5rem;width:100%;max-width:420px;margin:1rem;border: 1px solid var(--border);}
+  .auth-logo{display:flex;justify-content:center;margin-bottom:0.5rem;}
+  .auth-logo img, .auth-logo video{height:94px;width:auto;display:block;mix-blend-mode:multiply;}
+  
+  .auth-sub{text-align:center;font-size:0.875rem;color:var(--gray-500);margin-bottom:1.25rem;}
+  .role-badge{display:inline-flex;align-items:center;gap:0.4rem;border-radius:20px;padding:5px 14px;font-size:0.8rem;font-weight:700;letter-spacing:0.03em;margin-bottom:1.5rem;}
+  .role-badge.client{background:var(--gold-pale);color:var(--gold-dark);border:1.5px solid var(--gold-container);}
+  .role-badge.pilot{background:#EEF2FF;color:#3730A3;border:1.5px solid #C7D2FE;}
+  @media(max-width:480px){
+    body{align-items:flex-start;padding-top:2rem;}
+    .auth-box{padding:1.5rem 1.125rem !important;margin:.75rem !important;}
+    .auth-logo img, .auth-logo video{height:78px;}
+  }
+  .form-control,input[type=email],input[type=password],input[type=tel],input[type=text]{font-size:1rem !important;}
+  .pw-wrap{position:relative;}
+  .pw-wrap input{padding-right:2.5rem!important;}
+  .pw-eye{position:absolute;right:0.65rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--gray-400);display:flex;align-items:center;padding:0;line-height:1;}
+  .pw-eye:hover{color:var(--gray-600);}
+</style>
+</head>
+<body>
+<div class="auth-box">
+  <div class="auth-logo"><video src="{{ url_for('static', filename='img/logo.mp4') }}" autoplay loop muted playsinline></video></div>
+  <div class="auth-sub">Welcome back</div>
+
+  <div style="text-align:center;">
+    {% if lt == 'pilot' %}
+      <span class="role-badge pilot"><span class="inline-icon"><i data-lucide="rocket"></i></span> AI Pilot Login</span>
+    {% else %}
+      <span class="role-badge client"><span class="inline-icon"><i data-lucide="sparkles"></i></span> Customer Sign In</span>
+    {% endif %}
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ 'danger' if cat == 'error' else cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  {% if lt == 'pilot' %}
+  {# ── PILOT: email + password ─────────────────────────────── #}
+  <form method="POST" action="{{ url_for('login') }}?type=pilot">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="login_type" value="pilot">
+    <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true" tabindex="-1">
+      <input type="text" name="website" autocomplete="off" tabindex="-1">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input type="email" name="email" class="form-control" placeholder="pilot@email.com" required autofocus autocomplete="email" maxlength="254">
+    </div>
+    <div class="form-group" style="margin-top:0.75rem;">
+      <label class="form-label">Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="pilot-pw" name="password" class="form-control" placeholder="Your password" required autocomplete="current-password" maxlength="128">
+        <button type="button" class="pw-eye" onclick="togglePw('pilot-pw',this)" aria-label="Show password" tabindex="-1">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-full" style="margin-top:1rem;background:var(--navy);color:#fff;">Sign In &rarr;</button>
+  </form>
+  <div style="text-align:center;margin-top:0.75rem;font-size:0.8rem;color:var(--gray-400);">
+    Pilot accounts are set up by the admin only.
+  </div>
+
+  {% else %}
+  {# ── CLIENT: phone + 4-digit PIN ─────────────────────────── #}
+  <form method="POST" action="{{ url_for('login') }}?type=client">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="login_type" value="client">
+    <div style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none;" aria-hidden="true" tabindex="-1">
+      <input type="text" name="website" autocomplete="off" tabindex="-1">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mobile Number</label>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <span style="font-weight:600;color:var(--gray-600);font-size:1rem;padding:0.55rem 0.6rem;border:1.5px solid var(--gray-200);border-radius:var(--radius-md);background:var(--surface-low);white-space:nowrap;">+91</span>
+        <input type="tel" name="phone" class="form-control" placeholder="10-digit number" required autofocus maxlength="10" pattern="[6-9][0-9]{9}" inputmode="numeric" autocomplete="tel" style="flex:1;">
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:0.75rem;">
+      <label class="form-label">4-digit PIN</label>
+      <div class="pw-wrap">
+        <input type="password" name="pin" id="pin" class="form-control" placeholder="&#9679;&#9679;&#9679;&#9679;" required maxlength="4" minlength="4" inputmode="numeric" autocomplete="current-password" style="font-size:1.5rem;letter-spacing:0.4em;text-align:center;padding-right:2.5rem!important;">
+        <button type="button" class="pw-eye" onclick="togglePw('pin',this)" aria-label="Show PIN" tabindex="-1">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-full" style="margin-top:1rem;background:var(--navy);color:#fff;">Sign In &rarr;</button>
+  </form>
+
+  <div style="text-align:center;margin-top:1rem;font-size:0.875rem;color:var(--gray-500);">
+    New here?
+    <a href="{{ url_for('signup') }}" style="color:var(--navy);text-decoration:none;font-weight:700;">Create Account</a>
+  </div>
+  {% endif %}
+
+  <div style="text-align:center;margin-top:0.75rem;font-size:0.8rem;color:var(--gray-400);">
+    {% if lt == 'pilot' %}
+      Placing an order? <a href="{{ url_for('login') }}?type=client" style="color:var(--navy);font-weight:600;">Customer Sign In</a>
+    {% else %}
+      Are you a Pilot? <a href="{{ url_for('login') }}?type=pilot" style="color:var(--navy);font-weight:600;">Pilot Login</a>
+    {% endif %}
+  </div>
+
+  <a href="/" class="btn btn-full" style="margin-top:0.75rem;background:none;border:2px solid var(--gray-200);color:var(--gray-600);">&larr; Back to Homepage</a>
+
+  <div style="text-align:center;margin-top:1.25rem;font-size:0.72rem;color:var(--gray-400);display:flex;justify-content:center;gap:0.9rem;flex-wrap:wrap;">
+    <a href="/terms" style="color:var(--gray-500);">Terms</a>
+    <a href="/privacy" style="color:var(--gray-500);">Privacy</a>
+    <a href="/refund-policy" style="color:var(--gray-500);">Refunds</a>
+    <a href="/about" style="color:var(--gray-500);">About</a>
+  </div>
+</div>
+
+<script>
+var pinEl = document.getElementById('pin');
+if(pinEl){
+  pinEl.addEventListener('input', function(){
+    this.value = this.value.replace(/\D/g,'').slice(0,4);
+  });
+}
+function togglePw(id, btn) {
+  var inp = document.getElementById(id);
+  var showing = inp.type === 'text';
+  inp.type = showing ? 'password' : 'text';
+  btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+  btn.innerHTML = showing
+    ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
+    : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+}
+</script>
+<script src="{{ url_for('static', filename='js/mobile.js') }}" defer></script>
+<script>
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+</script>
+</body>
+</html>

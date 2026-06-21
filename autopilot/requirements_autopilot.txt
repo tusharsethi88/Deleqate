@@ -1,0 +1,20 @@
+# AutoPilot dependencies
+# Install via: pip install -r autopilot/requirements_autopilot.txt
+
+# Browser automation
+playwright>=1.40
+
+# Image processing
+rembg>=2.0          # Background removal (local, no API)
+Pillow>=10.0        # Image manipulation
+
+# Document generation
+reportlab>=4.0      # PDF creation
+python-docx>=1.1    # DOCX creation
+
+# Scheduling
+schedule>=1.2
+
+# HTTP (already in main requirements.txt — here for completeness)
+requests>=2.31
+python-dotenv>=1.0

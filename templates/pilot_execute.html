@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Execute Job #{{ order.id }} — Deleqate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+  body { background: #F0F4F8; }
+  .exec-wrap { display:grid; grid-template-columns:340px 1fr; gap:0; min-height:calc(100vh - 64px); }
+  .exec-left { background:var(--white); border-right:1px solid var(--gray-200); display:flex; flex-direction:column; }
+  .exec-left-scroll { overflow-y:auto; flex:1; padding:1.25rem; }
+  .exec-right { padding:1.5rem; overflow-y:auto; }
+
+  /* sidebar */
+  .job-header { padding-bottom:1rem; border-bottom:1px solid var(--gray-100); margin-bottom:1rem; }
+  .job-id { font-size:0.7rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--gray-400); }
+  .job-title { font-size:1.1rem; font-weight:700; color:var(--navy); margin-top:0.2rem; }
+  .sec-label { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--gray-400); margin:1rem 0 0.5rem; }
+  .file-thumb { border-radius:var(--radius); overflow:hidden; border:1.5px solid var(--gray-200); margin-bottom:0.6rem; }
+  .file-thumb img { width:100%; height:160px; object-fit:contain; background:var(--gray-100); display:block; }
+  .file-thumb-label { font-size:0.7rem; font-weight:600; color:var(--gray-500); padding:0.3rem 0.6rem; background:var(--gray-50); border-top:1px solid var(--gray-200); }
+  .brief-table { width:100%; border-collapse:collapse; }
+  .brief-table td { padding:0.25rem 0; font-size:0.79rem; vertical-align:top; }
+  .brief-table td:first-child { color:var(--gray-500); font-weight:600; width:42%; padding-right:0.5rem; }
+  .tool-btn { display:flex; align-items:center; gap:0.6rem; padding:0.6rem 0.875rem; border-radius:var(--radius); font-size:0.8125rem; font-weight:700; text-decoration:none; margin-bottom:0.5rem; transition:opacity 0.15s; }
+  .tool-btn:hover { opacity:0.85; }
+  .tool-gemini { background:#1A73E8; color:white; }
+  .tool-nano   { background:#15803D; color:white; }
+
+  /* progress */
+  .progress-bar { background:var(--white); border-radius:var(--radius-lg); padding:0.875rem 1.25rem; margin-bottom:1.25rem; display:flex; align-items:center; gap:1rem; border:2px solid var(--gray-100); }
+  .progress-track { flex:1; height:8px; background:var(--gray-200); border-radius:4px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg, var(--navy), var(--gold)); border-radius:4px; transition:width 0.4s ease; }
+  .progress-label { font-size:0.8rem; font-weight:600; color:var(--gray-600); margin-top:0.25rem; }
+  .progress-pct { font-size:1.4rem; font-weight:800; color:var(--navy); min-width:44px; text-align:right; }
+
+  /* pov tabs */
+  .pov-tabs { display:flex; gap:0.5rem; margin-bottom:1.25rem; flex-wrap:wrap; }
+  .pov-tab { padding:0.4rem 1.1rem; border-radius:20px; font-weight:700; font-size:0.8125rem; cursor:pointer; border:2px solid var(--gray-300); color:var(--gray-500); background:var(--white); transition:all 0.15s; }
+  .pov-tab.active { border-color:var(--navy); background:var(--navy); color:white; }
+  .pov-tab.done { border-color:var(--success); color:var(--success); }
+  .pov-tab.done.active { background:var(--success); color:white; }
+  .pov-panel { display:none; }
+  .pov-panel.active { display:block; }
+
+  /* step cards */
+  .step-card { background:var(--white); border-radius:var(--radius-lg); padding:1.25rem 1.5rem; margin-bottom:1rem; border:2px solid var(--gray-200); }
+  .step-card.active { border-color:var(--navy); }
+  .step-card.done { border-color:var(--success); }
+  .step-hdr { display:flex; align-items:center; gap:0.75rem; margin-bottom:0; }
+  .step-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; background:var(--gray-200); color:var(--gray-500); flex-shrink:0; }
+  .step-card.active .step-num { background:var(--navy); color:white; }
+  .step-card.done .step-num { background:var(--success); color:white; }
+  .step-title { font-weight:700; font-size:0.9375rem; color:var(--gray-600); }
+  .step-card.active .step-title { color:var(--navy); }
+  .step-card.done .step-title { color:var(--success); }
+  .step-body { margin-top:1rem; padding-top:1rem; border-top:1px solid var(--gray-100); }
+
+  /* prompt display */
+  .prompt-box { background:#1E2A3A; border-radius:var(--radius); padding:1rem 1.125rem; font-family:'Courier New',monospace; font-size:0.725rem; color:#CBD5E1; white-space:pre-wrap; word-break:break-word; max-height:280px; overflow-y:auto; line-height:1.6; }
+  .prompt-actions { display:flex; gap:0.6rem; margin-top:0.6rem; align-items:center; flex-wrap:wrap; }
+
+  /* gate buttons */
+  .gate-row { display:flex; align-items:center; gap:0.75rem; padding:0.75rem; border:2px solid var(--gray-200); border-radius:var(--radius); margin-bottom:0.5rem; }
+  .gate-q { font-size:0.875rem; font-weight:600; flex:1; }
+  .gate-btn { padding:0.25rem 0.875rem; border-radius:20px; font-size:0.8125rem; font-weight:700; border:2px solid; cursor:pointer; background:transparent; transition:all 0.15s; }
+  .gate-yes { border-color:var(--success); color:var(--success); }
+  .gate-yes.sel { background:var(--success); color:white; }
+  .gate-no { border-color:var(--danger); color:var(--danger); }
+  .gate-no.sel { background:var(--danger); color:white; }
+  .gate-hint { font-size:0.8rem; color:var(--gray-500); margin-top:0.3rem; padding:0.5rem 0.75rem; background:var(--gray-50); border-radius:var(--radius); display:none; }
+
+  /* render upload */
+  .upload-zone { border:2.5px dashed var(--gray-300); border-radius:var(--radius-lg); padding:1.5rem; text-align:center; background:var(--gray-50); position:relative; cursor:pointer; transition:all 0.2s; }
+  .upload-zone:hover, .upload-zone.dragover { border-color:var(--navy); background:rgba(26,58,92,0.04); }
+  .upload-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .render-preview img { max-height:200px; border-radius:var(--radius); border:2px solid var(--gray-200); display:block; margin:0.75rem auto 0; object-fit:contain; }
+
+  /* verdict grid */
+  .verdict-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; margin-top:0.75rem; }
+  .verdict-btn { padding:0.75rem 1rem; border-radius:var(--radius); font-weight:700; font-size:0.8125rem; border:2px solid; cursor:pointer; background:transparent; text-align:left; transition:all 0.15s; }
+  .verdict-pass { border-color:var(--success); color:var(--success); }
+  .verdict-pass:hover, .verdict-pass.sel { background:var(--success); color:white; }
+  .verdict-minor { border-color:#D97706; color:#D97706; }
+  .verdict-minor:hover, .verdict-minor.sel { background:#D97706; color:white; }
+  .verdict-regen { border-color:var(--danger); color:var(--danger); }
+  .verdict-regen:hover, .verdict-regen.sel { background:var(--danger); color:white; }
+  .verdict-back { border-color:var(--navy); color:var(--navy); }
+  .verdict-back:hover, .verdict-back.sel { background:var(--navy); color:white; }
+  .verdict-note { font-size:0.8rem; color:var(--gray-500); margin-top:0.4rem; padding:0.5rem 0.75rem; background:var(--gray-50); border-radius:var(--radius); display:none; }
+
+  /* collapsible */
+  .collapse-toggle { cursor:pointer; display:flex; align-items:center; justify-content:space-between; }
+  .collapse-toggle::after { content:'▼'; font-size:0.7rem; color:var(--gray-400); transition:transform 0.2s; }
+  .collapse-toggle.open::after { transform:rotate(180deg); }
+  .collapsible { display:none; }
+  .collapsible.open { display:block; }
+  .hint-text { font-size:0.8125rem; color:var(--gray-500); }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <span class="navbar-brand"><video src="{{ url_for('static', filename='img/logo.mp4') }}" autoplay loop muted playsinline></video></span>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false" onclick="this.classList.toggle('open');document.querySelector('.navbar-nav').classList.toggle('open');document.body.style.overflow=this.classList.contains('open')?'hidden':'';"><span></span><span></span><span></span></button>
+  <div class="navbar-nav">
+    <a href="{{ url_for('pilot_dashboard_v2') }}" style="color:rgba(255,255,255,0.7);">← My Jobs</a>
+    <span style="color:var(--gray-400)">|</span>
+    <span style="color:var(--gray-600);font-size:0.875rem">{{ current_user.name }}</span>
+    <a href="{{ url_for('logout') }}" style="font-size:0.8125rem;font-weight:600;color:var(--navy);border:2px solid var(--navy);border-radius:20px;padding:0.35rem 1rem;transition:background 0.2s,color 0.2s;" onmouseover="this.style.background='var(--navy)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='var(--navy)'">Logout</a>
+  </div>
+</nav>
+
+<div class="toast-container" id="toastContainer" role="status" aria-live="polite"></div>
+
+{% set render_count = order.render_count or 2 %}
+{% set pov_labels = ['A','B','C','D','E','F'] %}
+{% set povs = pov_labels[:render_count] %}
+{% set all_steps = pov_list if pov_list is defined else (steps if steps is defined else []) %}
+{% set room_name = intake.space_name or 'ROOM NAME' %}
+{% set prompt_a_saved = order.prompt_a_output %}
+
+<div class="exec-wrap">
+
+  <!-- ── LEFT SIDEBAR ── -->
+  <div class="exec-left">
+    <div class="exec-left-scroll">
+
+      <div class="job-header">
+        <div class="job-id">Job #{{ order.id }}</div>
+        <div class="job-title">{{ room_name }}</div>
+        <div style="margin-top:0.4rem;">
+          <span class="badge badge-{{ order.status or 'pending' }}">{{ (order.status or 'pending').replace('_',' ').title() }}</span>
+        </div>
+      </div>
+
+      <!-- CLIENT FILES -->
+      <div class="sec-label">Client Files</div>
+      {% set file_list = [] %}
+      {% for _f in (order.attachments or '').split(',') %}
+        {% if _f.strip() %}{% if file_list.append(_f.strip()) %}{% endif %}{% endif %}
+      {% endfor %}
+      {% if file_list %}
+        {% for fname in file_list %}
+          {% set fname = fname.strip() %}
+          {% if fname %}
+            {% set ext = fname.rsplit('.',1)[-1].lower() if '.' in fname else '' %}
+            {% if ext in ['jpg','jpeg','png','gif','webp'] %}
+              <div class="file-thumb">
+                <img src="/uploads/{{ fname }}" alt="{{ fname }}" onerror="this.parentElement.style.display='none'">
+                <div class="file-thumb-label">{% if loop.index == 1 %}📐 Floor Plan{% elif loop.index == 2 %}🎨 Moodboard{% else %}📎 File {{ loop.index }}{% endif %}</div>
+              </div>
+            {% else %}
+              <a href="/uploads/{{ fname }}" target="_blank" class="btn btn-outline btn-sm" style="display:block;margin-bottom:0.5rem;">📎 {{ fname }}</a>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <div style="font-size:0.8125rem;color:var(--gray-400);padding:0.5rem 0;">No client files attached.</div>
+      {% endif %}
+
+      <!-- BRIEF DETAILS -->
+      <div class="sec-label">Brief</div>
+      <table class="brief-table">
+        {% if intake.space_type %}<tr><td>Space</td><td>{{ intake.space_type.replace('_',' ').title() }}</td></tr>{% endif %}
+        {% if intake.style_direction %}<tr><td>Style</td><td>{{ intake.style_direction }}</td></tr>{% endif %}
+        {% if intake.hero_element %}<tr><td>Hero</td><td>{{ intake.hero_element }}</td></tr>{% endif %}
+        {% if intake.special_notes %}<tr><td>Notes</td><td>{{ intake.special_notes }}</td></tr>{% endif %}
+        <tr><td>Renders</td><td>{{ render_count }}</td></tr>
+        {% if order.deadline %}<tr><td>Deadline</td><td>{{ order.deadline }}</td></tr>{% endif %}
+      </table>
+
+      <!-- TOOL LINKS -->
+      <div class="sec-label">Tools</div>
+      <a href="https://gemini.google.com" target="_blank" class="tool-btn tool-gemini">
+        <span>✦</span> Gemini Free (paste prompts here)
+      </a>
+      <a href="https://labs.google/flow" target="_blank" class="tool-btn tool-nano" style="background:#10B981;">
+        <span>🌀</span> Google Flow (image gen)
+      </a>
+
+      <!-- TIME BUDGET -->
+      <div class="sec-label">Time Budget</div>
+      <div style="font-size:0.8rem;color:var(--gray-600);line-height:1.6;">
+        {% if render_count <= 2 %}20–25 min total
+        {% elif render_count == 3 %}35–40 min total
+        {% else %}45–55 min total{% endif %}
+        <span style="display:block;color:var(--gray-400);">Payout: ₹{{ '{:,}'.format((order.pilot_payout or 0) // 100) }}</span>
+      </div>
+
+    </div><!-- /scroll -->
+
+    <!-- BOTTOM: COMPLETE JOB -->
+    <div style="padding:1rem 1.25rem;border-top:1px solid var(--gray-200);">
+      <button id="completeBtn" class="btn btn-gold btn-full" onclick="completeJob()" disabled>
+        ✅ Mark Job Complete
+      </button>
+      <div id="completeHint" style="font-size:0.75rem;color:var(--gray-500);text-align:center;margin-top:0.4rem;">
+        Complete all {{ render_count }} POVs to enable
+      </div>
+      <button id="restartBtn" class="btn btn-outline btn-full" style="margin-top:1rem; border-color:var(--danger); color:var(--danger);" onclick="restartJob()">
+        🔄 Restart Dashboard
+      </button>
+    </div>
+  </div><!-- /exec-left -->
+
+  <!-- ── RIGHT: EXECUTION WORKSPACE ── -->
+  <div class="exec-right">
+
+    <!-- PROGRESS BAR -->
+    <div class="progress-bar">
+      <div style="flex:1;">
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill" style="width:0%"></div>
+        </div>
+        <div class="progress-label" id="progressLabel">0 of {{ render_count }} renders complete</div>
+      </div>
+      <div class="progress-pct" id="progressPct">0%</div>
+    </div>
+
+    
+    <!-- ══════════════════════════════════════════════════
+         STAGE 0 — IMAGE PREPARATION
+    ══════════════════════════════════════════════════ -->
+    <div class="step-card active" style="border-color:#D97706;" id="stage0Card">
+      <div class="step-hdr">
+        <div class="step-num" style="background:#D97706;color:white;">0</div>
+        <div>
+          <div class="step-title" style="color:#D97706;">Stage 0 — Pre-label the Plan</div>
+          <div class="hint-text">👤 HUMAN TASK: You must prepare the floor plan before proceeding.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div style="background:#FFFBEB; border:1px solid #FDE68A; padding:1rem; border-radius:8px; margin-bottom:1rem;">
+          <h4 style="margin-top:0; color:#B45309; font-size:0.9rem;">Instructions</h4>
+          <ol style="margin-bottom:0; font-size:0.85rem; color:#92400E; padding-left:1.2rem; line-height:1.5;">
+            <li>Download the original floor plan from the left sidebar.</li>
+            <li>Open it in MS Paint, Mac Preview, or any image editor.</li>
+            <li>Draw and label the following on the image:
+                <ul style="margin:0.2rem 0 0.2rem 1.2rem; list-style-type:square;">
+                    <li><strong>Compass:</strong> "N" pointing North.</li>
+                    <li><strong>Wall Tags:</strong> Label North, South, East, West walls.</li>
+                    <li><strong>Openings:</strong> Circle and label doors/windows.</li>
+                    <li><strong>Furniture:</strong> Number all freestanding furniture (1, 2, 3...).</li>
+                    <li><strong>Camera Marks:</strong> Add a Red "X" and a Red Arrow showing exactly where the camera is and which direction it points for each POV.</li>
+                </ul>
+            </li>
+            <li>Save this labeled image to your computer.</li>
+          </ol>
+        </div>
+        
+        <div style="font-weight:600; font-size:0.85rem; margin-bottom:0.5rem; color:var(--navy);">Upload your labeled plan here:</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+          {% for pov_key in povs %}
+            {% set pov_step = [] %}
+            {% for s in all_steps %}{% if s.pov == pov_key %}{% if pov_step.append(s) %}{% endif %}{% endif %}{% endfor %}
+            {% set p = pov_step[0] if pov_step else none %}
+            <div class="upload-zone" style="padding:1rem;" ondrop="handleDropPlan(event,'{{ pov_key }}')" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+              <input type="file" accept="image/*" onchange="uploadLabeledPlan(event,'{{ pov_key }}')">
+              <div style="font-size:1.5rem;margin-bottom:0.2rem;">📐</div>
+              <div style="font-weight:700;color:var(--gray-600);font-size:0.8rem;">Upload POV-{{ pov_key }} Plan</div>
+              {% if p and p.labeled_plan_filename %}
+                <div style="margin-top:0.5rem; color:var(--success); font-size:0.75rem; font-weight:700;">✅ Uploaded</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         STEP 1 — STAGE A (Three Passes)
+    ══════════════════════════════════════════════════ -->
+    <div class="step-card {% if prompt_a_saved %}done{% else %}active{% endif %}" id="promptACard">
+      <div class="step-hdr collapse-toggle {% if prompt_a_saved %}open{% endif %}" onclick="togglePromptA(this)">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div class="step-num">{% if prompt_a_saved %}✓{% else %}1{% endif %}</div>
+          <div>
+            <div class="step-title">Stage A — Room Analysis (3 Passes)</div>
+            {% if prompt_a_saved %}<div style="font-size:0.8rem;color:var(--success);">✅ Saved — expand to review or update</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="step-body collapsible {% if not prompt_a_saved %}open{% endif %}" id="promptABody">
+
+        <p class="hint-text" style="margin-bottom:1rem;">
+          Run these three passes in order. Do not skip.
+        </p>
+
+        <!-- A1a — Wall Inventory -->
+        <div style="border-bottom:1px solid var(--gray-200); padding-bottom:1.25rem; margin-bottom:1.25rem;">
+          <div style="font-weight:700; color:var(--navy); margin-bottom:0.5rem;">Pass 1: A1a — Wall Inventory</div>
+          <div class="prompt-box" id="promptA1aText">You are looking at an attached floor plan. Ignore the red camera marks for now.
+List what is physically in the room using ONLY items shown and labeled on the plan.
+
+====================================================
+WALLS
+====================================================
+NORTH WALL: [all openings + anything built into or against this wall]
+SOUTH WALL: [all openings + anything built into or against this wall]
+EAST WALL:  [all openings + anything built into or against this wall]
+WEST WALL:  [all openings + anything built into or against this wall]
+
+====================================================
+FURNITURE (free-standing pieces)
+====================================================
+For EACH numbered furniture piece on the plan, write one line:
+[#] [Item name] — [position: NW corner / center / against east wall / etc.]
+                — [orientation: head points west / long axis N-S / etc.]
+
+====================================================
+ADJACENT SPACES
+====================================================
+Any toilet, dressing room, kitchen, corridor, or staircase attached to this room.
+Name each and state which wall it sits behind.
+
+RULES:
+- Read the wall labels on the plan as ground truth.
+- The red X and red arrow are camera marks. NEVER list them as floor or wall objects.
+- If unsure, write "unsure" — do not guess.
+
+Output only. No commentary.</div>
+          <div class="prompt-actions" style="background:#F8FAFC; padding:0.75rem; border-radius:6px; margin-top:0.75rem;">
+            <div style="font-size:0.85rem; font-weight:700; color:#0F172A; margin-bottom:0.4rem;">Steps:</div>
+            <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">1. <button class="btn btn-primary btn-sm" style="padding:0.1rem 0.5rem;" onclick="copyText('promptA1aText', this)">📋 Click to Copy A1a Prompt</button></div>
+            <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">2. 🤖 Open Gemini. Attach your <strong>LABELED FLOOR PLAN</strong>.</div>
+            <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">3. ⌨️ Paste the copied prompt into Gemini and send.</div>
+            <div style="font-size:0.8rem; color:#334155;">4. 👤 Copy Gemini's exact reply and paste it into the box below.</div>
+          </div>
+          <label style="font-size:0.8rem;font-weight:700;color:var(--gray-600);display:block;margin-top:1rem;margin-bottom:0.35rem;">Paste GEMINI'S EXACT REPLY here:</label>
+          <textarea id="wallInventoryOutput" class="form-control" rows="3" placeholder="Paste Gemini's A1a response here..." style="font-family:monospace; font-size:0.79rem;">{{ order.wall_inventory_output or '' }}</textarea>
+        </div>
+
+        <!-- A1c — Moodboard Extraction -->
+        <div style="border-bottom:1px solid var(--gray-200); padding-bottom:1.25rem; margin-bottom:1.25rem;">
+          <div style="font-weight:700; color:var(--navy); margin-bottom:0.5rem;">Pass 2: A1c — Moodboard Extraction</div>
+          <div class="prompt-box" id="promptA1cText">{% if file_list | length > 1 %}You are looking at an interior design moodboard.
+Extract the following. Use ONLY what you can see. Do not invent or assume.
+
+STYLE: [overall style in 3-5 words, e.g. "warm minimalist Japandi, natural textures"]
+
+MATERIALS:
+FLOOR:              [material, finish, color — e.g. "Kota limestone, matte, light grey-beige"]
+WALLS:              [finish and color — e.g. "warm lime plaster, off-white, slight texture"]
+CEILING:            [finish — or "standard plaster, white"]
+PRIMARY FURNITURE:  [dominant pieces — style, material, color]
+SECONDARY FURNITURE:[other visible pieces — or "none"]
+LIGHTING:           [fixture type + color temp — e.g. "recessed 2700K warm, pendant bedside"]
+ACCENT ELEMENT:     [feature wall / artwork / special material — or "none"]
+TEXTILES:           [rugs, curtains, throws — or "none"]
+
+FORBIDDEN — list every element clearly ABSENT from this moodboard that AI image
+generators commonly hallucinate. These must NOT appear in any render. One per line:
+-
+-
+-
+
+Output only. No commentary.{% else %}No moodboard provided. Write "NO MOODBOARD PROVIDED" and stop.{% endif %}</div>
+          <div class="prompt-actions" style="background:#F8FAFC; padding:0.75rem; border-radius:6px; margin-top:0.75rem;">
+            <div style="font-size:0.85rem; font-weight:700; color:#0F172A; margin-bottom:0.4rem;">Steps:</div>
+            <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">1. <button class="btn btn-primary btn-sm" style="padding:0.1rem 0.5rem;" onclick="copyText('promptA1cText', this)">📋 Click to Copy A1c Prompt</button></div>
+            <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">2. 🤖 Go to Gemini. Attach the <strong>MOODBOARD</strong> (if provided in sidebar).</div>
+            <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">3. ⌨️ Paste the copied prompt and send.</div>
+            <div style="font-size:0.8rem; color:#334155;">4. 👤 Copy Gemini's exact reply and paste it into the box below. (If no moodboard, just type "NO MOODBOARD PROVIDED").</div>
+          </div>
+          <label style="font-size:0.8rem;font-weight:700;color:var(--gray-600);display:block;margin-top:1rem;margin-bottom:0.35rem;">Paste GEMINI'S EXACT REPLY here:</label>
+          <textarea id="moodboardOutput" class="form-control" rows="3" placeholder="Paste Gemini's A1c response here (or default if no moodboard)..." style="font-family:monospace; font-size:0.79rem;">{{ order.moodboard_output or '' }}</textarea>
+        </div>
+
+        <!-- A1b — POV Description -->
+        <div style="border-bottom:1px solid var(--gray-200); padding-bottom:1.25rem; margin-bottom:1.25rem;">
+          <div style="font-weight:700; color:var(--navy); margin-bottom:0.5rem;">Pass 3: A1b — POV Description</div>
+          <div class="prompt-box" id="promptA1bText"><span style="color:#64748B;font-style:italic;">← Paste Wall Inventory (A1a) above to assemble this prompt</span></div>
+          <div class="prompt-actions" style="background:#F8FAFC; padding:0.75rem; border-radius:6px; margin-top:0.75rem;">
+            <div style="font-size:0.85rem; font-weight:700; color:#0F172A; margin-bottom:0.4rem;">Steps:</div>
+            <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">1. <button class="btn btn-primary btn-sm" style="padding:0.1rem 0.5rem;" onclick="copyA1b()" id="copyA1bBtn" disabled>📋 Click to Copy A1b Prompt</button></div>
+            <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">2. 🤖 Go back to Gemini. Attach the <strong>LABELED FLOOR PLAN</strong> again.</div>
+            <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">3. ⌨️ Paste the copied prompt and send.</div>
+            <div style="font-size:0.8rem; color:#334155;">4. 👤 Copy Gemini's massive reply and paste it ENTIRELY into the box below.</div>
+          </div>
+          <label style="font-size:0.8rem;font-weight:700;color:var(--gray-600);display:block;margin-top:1rem;margin-bottom:0.35rem;">Paste GEMINI'S EXACT REPLY here (Should contain === POV-A ===, etc):</label>
+          <textarea id="promptAOutput" class="form-control" rows="5" placeholder="Paste full Gemini A1b output here (=== POV-A ===, etc)..." style="font-family:monospace; font-size:0.79rem;">{{ order.prompt_a_output or '' }}</textarea>
+        </div>
+
+        <!-- A2 — Binary Verification -->
+        <div>
+          <div style="font-weight:700; color:var(--navy); margin-bottom:0.5rem;">A2 — Binary Verification (Self-Check)</div>
+          <div style="font-size:0.8rem; margin-bottom:0.75rem; color:var(--gray-600);">
+            <strong style="color:var(--danger);">👤 HUMAN TASK:</strong> You must read through the A1b output above using your own eyes. Does it match the floor plan perfectly?
+            <ul style="margin-top:0.4rem; padding-left:1.5rem;">
+              <li>Main opening on correct wall/side?</li>
+              <li>Main furniture pressed against correct wall?</li>
+              <li>Any items listed in two zones simultaneously?</li>
+            </ul>
+            If there are errors, ask Gemini to re-read and fix just that line.
+          </div>
+          <div class="gate-row" id="gate1Row">
+            <div>
+              <div class="gate-q">Is the A1b output completely accurate with zero spatial errors?</div>
+              <div class="gate-hint" id="gate1Hint">Fix any errors with Gemini before saving.</div>
+            </div>
+            <div style="display:flex;gap:0.4rem;flex-shrink:0;">
+              <button class="gate-btn gate-yes" onclick="setGate(1,'yes',this)">✓ Yes</button>
+              <button class="gate-btn gate-no" onclick="setGate(1,'no',this)">✗ No</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SAVE -->
+        <div id="savePromptABlock" style="display:none;margin-top:0.75rem;">
+          <div style="display:flex;gap:0.75rem;align-items:center;">
+            <button class="btn btn-gold btn-sm" onclick="savePromptA()">💾 Save Stage A & Unlock POV Renders</button>
+            <span class="hint-text" id="promptASaveStatus">{% if prompt_a_saved %}✅ Saved{% endif %}</span>
+          </div>
+        </div>
+      </div>
+    </div><!-- /prompt A card -->
+
+    <!-- ══════════════════════════════════════════════════
+         STEP 2 — PER POV (tabs)
+    ══════════════════════════════════════════════════ -->
+    <div class="step-card {% if not prompt_a_saved %}{% else %}active{% endif %}" id="povCard">
+      <div class="step-hdr" style="margin-bottom:1rem;">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">Per-POV: Prompt B → Generate → QC → Verdict</div>
+          <div class="hint-text">Run once per POV. Use a fresh Gemini chat for each prompt.</div>
+        </div>
+      </div>
+
+      <!-- POV TABS -->
+      <div class="pov-tabs" id="povTabs">
+        {% for pov_key in povs %}
+          {% set pov_step = [] %}
+          {% for s in all_steps %}{% if s.pov == pov_key %}{% if pov_step.append(s) %}{% endif %}{% endif %}{% endfor %}
+          {% set p = pov_step[0] if pov_step else none %}
+          <button class="pov-tab {% if loop.first %}active{% endif %} {{ 'done' if (p and p.qc_result == 'pass') else '' }}"
+            data-pov="{{ pov_key }}"
+            onclick="switchPov('{{ pov_key }}', this)">
+            POV-{{ pov_key }}{% if p and p.qc_result == 'pass' %} ✓{% endif %}
+          </button>
+        {% endfor %}
+      </div>
+
+      <!-- POV PANELS -->
+      {% for pov_key in povs %}
+        {% set pov_step = [] %}
+        {% for s in all_steps %}{% if s.pov == pov_key %}{% if pov_step.append(s) %}{% endif %}{% endif %}{% endfor %}
+        {% set p = pov_step[0] if pov_step else none %}
+        {% set is_first_pov = loop.first %}
+        {% set pov_idx = loop.index0 %}
+
+      <div class="pov-panel {% if loop.first %}active{% endif %}" id="panel-{{ pov_key }}">
+
+        <!-- ─── 2a: PASTE POV SECTION ─── -->
+        <div class="step-card {% if not p or not p.spatial_facts %}active{% else %}done{% endif %} mb-2" id="step2a-{{ pov_key }}" style="margin-bottom:0.875rem;">
+          <div class="step-hdr">
+            <div class="step-num">{% if p and p.spatial_facts %}✓{% else %}A{% endif %}</div>
+            <div class="step-title">Paste your POV-{{ pov_key }} section from Prompt A output</div>
+          </div>
+          <div class="step-body">
+            <div style="background:#F8FAFC; padding:0.75rem; border-radius:6px; margin-bottom:0.8rem; font-size:0.8rem; color:#334155;">
+              <strong style="color:var(--danger);">👤 HUMAN TASK:</strong> Scroll up to the massive A1b text you pasted earlier. Highlight ONLY the section that belongs to <strong>POV-{{ pov_key }}</strong> (from the === POV-{{ pov_key }} === header down to the rules) and paste it below.
+            </div>
+            <textarea id="povSection-{{ pov_key }}" class="form-control" rows="5"
+              placeholder="Paste === POV-{{ pov_key }} === section here..."
+              style="font-family:monospace;font-size:0.79rem;">{{ p.spatial_facts if p and p.spatial_facts else '' }}</textarea>
+            <div style="margin-top:0.6rem;">
+              <button class="btn btn-primary btn-sm" onclick="savePovSection('{{ pov_key }}')">Save Section → Assemble Prompt B</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── 2b: PROMPT B (assembled) ─── -->
+        <div class="step-card {% if p and p.spatial_facts and not p.render_filename %}active{% elif p and p.render_filename %}done{% endif %}" style="margin-bottom:0.875rem;" id="step2b-{{ pov_key }}">
+          <div class="step-hdr">
+            <div class="step-num">{% if p and p.render_filename %}✓{% else %}B{% endif %}</div>
+            <div class="step-title">Prompt B — Copy → Gemini → Get JSON</div>
+          </div>
+          <div class="step-body">
+            <p class="hint-text" style="margin-bottom:0.6rem;">
+              This prompt automatically merged your spatial layout and moodboard materials.
+            </p>
+
+            <div class="prompt-box" id="promptBBox-{{ pov_key }}">{% if p and p.spatial_facts %}{{ build_prompt_b_placeholder(p.spatial_facts) if false else '' }}{% endif %}
+<span style="color:#64748B;font-style:italic;">{{ '← Paste POV section above to assemble Prompt B' if not (p and p.spatial_facts) else '' }}</span>{% if p and p.spatial_facts %}You are an architectural visualization assistant.
+
+Below is an approved spatial description and materials spec for one POV of an interior room. Convert it into a structured JSON image-generation prompt.
+
+APPROVED DESCRIPTION — START
+{{ p.spatial_facts }}
+APPROVED DESCRIPTION — END
+
+APPROVED MATERIALS — START
+{{ order.moodboard_output or 'No moodboard details' }}
+APPROVED MATERIALS — END
+
+---
+
+Convert the above into a single JSON image-generation spec using EXACTLY these keys.
+Do not add or remove keys.
+Spatial keys come from the POV description file ONLY.
+Material keys come from the moodboard materials file ONLY. Do not mix sources.
+
+{
+  "view": "16:9 wide-angle photorealistic interior render",
+  "camera_position": "[copy from CAMERA POSITION]",
+  "camera_direction": "[copy from CAMERA DIRECTION]",
+  "top_frame": ["[item]"],
+  "back_of_sight": ["[item]"],
+  "left_wall": "...",
+  "right_wall": "...",
+  "left_top": ["[item]"],
+  "left_center": ["[item]"],
+  "left_bottom": ["[item]"],
+  "center": ["[item]"],
+  "right_top": ["[item]"],
+  "right_center": ["[item]"],
+  "right_bottom": ["[item]"],
+  "furniture_facing": [
+    { "item": "...", "pressed_against": "Left Wall (west)", "facing": "Right (east)" }
+  ],
+  "wall_openings": ["[item]"],
+  "ceiling_fixtures": ["[item]"],
+  "floor_features": ["[item]"],
+  "style":               "[copy from STYLE]",
+  "floor_material":      "[copy from FLOOR]",
+  "wall_finish":         "[copy from WALLS]",
+  "ceiling_finish":      "[copy from CEILING]",
+  "primary_furniture":   "[copy from PRIMARY FURNITURE]",
+  "lighting":            "[copy from LIGHTING]",
+  "accent_element":      "[copy from ACCENT ELEMENT]",
+  "textiles":            "[copy from TEXTILES]",
+  "must_match_attached_plan": true,
+  "must_match_previous_pov_for_furniture_and_materials": {% if is_first_pov %}false{% else %}true{% endif %},
+  "forbidden": ["[copy every item from FORBIDDEN list exactly]"]
+}
+
+Output the JSON only. Nothing else.{% endif %}</div>
+
+            <div class="prompt-actions">
+              <button class="btn btn-primary btn-sm" onclick="copyPromptB('{{ pov_key }}')" id="copyBBtn-{{ pov_key }}" {% if not (p and p.spatial_facts) %}disabled{% endif %}>📋 Copy Prompt B</button>
+              <a href="https://gemini.google.com" target="_blank" class="btn btn-sm" style="background:#1A73E8;color:white;">✦ Open Gemini Free →</a>
+              
+            </div>
+
+            
+            <div style="margin-top:1rem;">
+              <label style="font-size:0.8rem;font-weight:700;color:var(--gray-600);display:block;margin-bottom:0.35rem;">
+                Paste the JSON from Gemini here (required for Flow Prompt generation):
+              </label>
+              <textarea id="promptBJson-{{ pov_key }}" class="form-control" rows="4"
+                placeholder='{ "view": "...", "camera_position": "...", ... }'
+                style="font-family:monospace;font-size:0.79rem;">{{ p.generated_prompt if p and p.generated_prompt else '' }}</textarea>
+              <button class="btn btn-outline btn-sm" style="margin-top:0.4rem;" onclick="savePromptB('{{ pov_key }}')">💾 Save JSON</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── 2b2: FLOW PROMPT CONVERSION (C0) ─── -->
+        <div class="step-card {% if p and p.generated_prompt and not p.render_filename %}active{% elif p and p.render_filename %}done{% endif %}" style="margin-bottom:0.875rem;" id="step2c0-{{ pov_key }}">
+          <div class="step-hdr">
+            <div class="step-num">{% if p and p.flow_prompt %}✓{% else %}C0{% endif %}</div>
+            <div class="step-title">Flow Prompt (C0) — Convert JSON to Natural Language</div>
+          </div>
+          <div class="step-body">
+            <p class="hint-text" style="margin-bottom:0.6rem;">
+              Image generators like Google Flow need natural sentences, not code. Let's convert it.
+            </p>
+            <div class="prompt-box" id="promptC0Box-{{ pov_key }}"><span style="color:#64748B;font-style:italic;">← Save JSON above to assemble this prompt</span></div>
+            
+            <div class="prompt-actions" style="background:#F8FAFC; padding:0.75rem; border-radius:6px; margin-top:0.75rem;">
+              <div style="font-size:0.85rem; font-weight:700; color:#0F172A; margin-bottom:0.4rem;">Steps:</div>
+              <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">1. <button class="btn btn-primary btn-sm" style="padding:0.1rem 0.5rem;" onclick="copyFlowPromptC0('{{ pov_key }}')" id="copyC0Btn-{{ pov_key }}" disabled>📋 Click to Copy C0 Prompt</button></div>
+              <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">2. 🤖 Open a <strong style="color:var(--danger);">FRESH Gemini chat</strong>.</div>
+              <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">3. ⌨️ Paste the copied prompt and send.</div>
+              <div style="font-size:0.8rem; color:#334155;">4. 👤 Copy the paragraph Gemini writes and paste it below.</div>
+            </div>
+            
+            <div style="margin-top:1rem;">
+              <label style="font-size:0.8rem;font-weight:700;color:var(--gray-600);display:block;margin-bottom:0.35rem;">
+                Paste the resulting natural language Flow prompt here:
+              </label>
+              <textarea id="flowPromptOut-{{ pov_key }}" class="form-control" rows="4" style="font-family:monospace;font-size:0.79rem;">{{ p.flow_prompt if p and p.flow_prompt else '' }}</textarea>
+              <button class="btn btn-outline btn-sm" style="margin-top:0.4rem;" onclick="saveFlowPrompt('{{ pov_key }}')">💾 Save Flow Prompt</button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ─── 2c: UPLOAD RENDER ─── -->
+        <div class="step-card {% if p and p.render_filename and not p.qc_result %}active{% elif p and p.qc_result %}done{% endif %}" style="margin-bottom:0.875rem;" id="step2c-{{ pov_key }}">
+          <div class="step-hdr">
+            <div class="step-num">{% if p and p.qc_result %}✓{% else %}C{% endif %}</div>
+            <div class="step-title">Upload Render — POV-{{ pov_key }}</div>
+          </div>
+          <div class="step-body">
+            <div style="background:#F8FAFC; padding:0.75rem; border-radius:6px; margin-bottom:0.8rem; font-size:0.8rem; color:#334155;">
+              <strong style="color:var(--danger);">👤 HUMAN TASK:</strong> Go to <a href="https://labs.google/flow" target="_blank" style="color:var(--navy);font-weight:700;text-decoration:underline;">Google Flow 🌀</a>. Paste the Natural Language Flow Prompt from C0. Generate images. Pick the absolute best one, save it to your computer, and upload it here.
+            </div>
+            {% if p and p.render_filename %}
+              <div class="render-preview">
+                <img src="/deliverables/{{ p.render_filename }}" alt="Render POV-{{ pov_key }}" onerror="this.style.display='none'">
+                <div style="font-size:0.79rem;color:var(--gray-500);margin-top:0.4rem;text-align:center;">{{ p.render_filename.split('/')[-1] }}</div>
+              </div>
+              {% if not p.qc_result %}
+              <div style="margin-top:0.75rem;">
+                <label class="upload-zone" style="padding:0.75rem;">
+                  <input type="file" accept="image/*" onchange="uploadRender(event,'{{ pov_key }}')">
+                  <span style="font-size:0.8rem;color:var(--gray-500);">Re-upload render</span>
+                </label>
+              </div>
+              {% endif %}
+            {% else %}
+              <div class="upload-zone" id="uploadZone-{{ pov_key }}"
+                ondragover="event.preventDefault();this.classList.add('dragover')"
+                ondragleave="this.classList.remove('dragover')"
+                ondrop="handleDrop(event,'{{ pov_key }}')">
+                <input type="file" accept="image/*" onchange="uploadRender(event,'{{ pov_key }}')">
+                <div style="font-size:2rem;margin-bottom:0.4rem;">🖼️</div>
+                <div style="font-weight:700;color:var(--gray-600);font-size:0.875rem;">Drop render here or click to upload</div>
+                <div style="font-size:0.79rem;color:var(--gray-400);margin-top:0.2rem;">JPG, PNG — max 10MB</div>
+              </div>
+              <div id="renderPreview-{{ pov_key }}" class="render-preview" style="display:none;"></div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- ─── 2d: QC ─── -->
+        <div class="step-card {% if p and p.render_filename and not p.qc_result %}active{% elif p and p.qc_result == 'pass' %}done{% endif %}" id="step2d-{{ pov_key }}">
+          <div class="step-hdr">
+            <div class="step-num">{% if p and p.qc_result == 'pass' %}✓{% else %}D{% endif %}</div>
+            <div class="step-title">QC — AI Quality Control & Verdict</div>
+          </div>
+          <div class="step-body">
+
+            {% if p and p.qc_result == 'pass' %}
+              <div style="color:var(--success);font-weight:700;font-size:0.875rem;">✅ QC Passed — POV-{{ pov_key }} complete!</div>
+            {% elif p and p.qc_result == 'fail' %}
+              <div style="color:var(--danger);font-weight:700;font-size:0.875rem;margin-bottom:0.75rem;">
+                ❌ QC: {{ p.qc_data or 'fail' }} — follow the action below and re-upload.
+              </div>
+            {% endif %}
+
+            {% if not (p and p.qc_result == 'pass') %}
+              <div class="prompt-actions" style="background:#F8FAFC; padding:0.75rem; border-radius:6px; margin-bottom:0.8rem;">
+                <div style="font-size:0.85rem; font-weight:700; color:#0F172A; margin-bottom:0.4rem;">Steps:</div>
+                <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">1. <button class="btn btn-primary btn-sm" style="padding:0.1rem 0.5rem;" onclick="copyText('promptCBox-{{ pov_key }}', this)">📋 Click to Copy QC Prompt</button></div>
+                <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">2. 🤖 Open a <strong style="color:var(--danger);">FRESH Gemini chat</strong>.</div>
+                <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">3. 📎 Attach images: {% if is_first_pov %}<strong>The new render</strong> you just uploaded.{% else %}<strong>1. The new render</strong> AND <strong>2. The approved POV-A render</strong>.{% endif %}</div>
+                <div style="font-size:0.8rem; color:#334155; margin-bottom:0.4rem;">4. ⌨️ Paste the copied prompt and send.</div>
+                <div style="font-size:0.8rem; color:#334155;">5. <strong style="color:var(--danger);">👤 HUMAN TASK:</strong> Read Gemini's verdict and click the matching button below. Do not blindly trust it — verify with your eyes!</div>
+              </div>
+
+              <!-- QC PROMPT -->
+              <div class="prompt-box" id="promptCBox-{{ pov_key }}">{% if is_first_pov %}You are a quality control checker for architectural interior renders.
+
+Attached: one render image. Check it against the approved specification below.
+
+APPROVED DESCRIPTION — START
+{{ p.spatial_facts if p and p.spatial_facts else '[paste POV-A description from Step A above]' }}
+APPROVED DESCRIPTION — END
+
+APPROVED JSON — START
+{{ p.generated_prompt if p and p.generated_prompt else '[paste JSON from Step B above]' }}
+APPROVED JSON — END
+
+---
+
+SPATIAL CHECK:
+For every item in furniture_facing and every grid zone in the JSON:
+[item] — CORRECT / WRONG POSITION (describe) / MISSING / EXTRA (not in spec)
+
+MATERIALS CHECK:
+FLOOR        — MATCHES / DIFFERS: [describe]
+WALLS        — MATCHES / DIFFERS: [describe]
+FURNITURE    — MATCHES / DIFFERS: [describe]
+LIGHTING     — MATCHES / DIFFERS: [describe]
+ACCENT       — MATCHES / DIFFERS / N/A
+
+FORBIDDEN CHECK:
+List any forbidden item visible in the render, or write "none."
+
+HALLUCINATION CHECK:
+List any item visible in the render that is NOT in the approved spec, or write "none."
+
+FINAL VERDICT — choose exactly one:
+PASS        — zero spatial errors, zero forbidden, zero hallucinations, zero major material mismatches.
+MINOR FIXES — list the exact 1-2 small items to edit.
+REGENERATE  — any wrong spatial position, any forbidden item, 3+ total issues.
+BACK TO DESCRIBE — left/right completely mirrored OR major furniture on entirely wrong wall.
+
+Output only. No suggestions. No commentary.{% else %}You are a quality control checker for architectural interior renders.
+
+Attached:
+- Image 1: the new render to check (POV-{{ pov_key }})
+- Image 2: the approved render from POV-A — FURNITURE TRUTH. Every piece of furniture, material, and color in Image 1 must exactly match Image 2.
+
+APPROVED DESCRIPTION FOR IMAGE 1 — START
+{{ p.spatial_facts if p and p.spatial_facts else '[paste POV-' ~ pov_key ~ ' description from Step A above]' }}
+APPROVED DESCRIPTION — END
+
+APPROVED JSON FOR IMAGE 1 — START
+{{ p.generated_prompt if p and p.generated_prompt else '[paste JSON from Step B above]' }}
+APPROVED JSON — END
+
+---
+
+SPATIAL CHECK:
+For every item in furniture_facing and every grid zone in the JSON:
+[item] — CORRECT / WRONG POSITION (describe) / MISSING / EXTRA (not in spec)
+
+MATERIALS CHECK:
+FLOOR        — MATCHES / DIFFERS: [describe]
+WALLS        — MATCHES / DIFFERS: [describe]
+FURNITURE    — MATCHES / DIFFERS: [describe]
+LIGHTING     — MATCHES / DIFFERS: [describe]
+ACCENT       — MATCHES / DIFFERS / N/A
+
+CONSISTENCY CHECK (Image 1 vs Image 2):
+For every furniture piece and material visible in both images:
+[item] — IDENTICAL / CONSISTENCY FAIL: [describe the difference]
+
+FORBIDDEN CHECK:
+List any forbidden item visible in the render, or write "none."
+
+HALLUCINATION CHECK:
+List any item visible in the render that is NOT in the approved spec, or write "none."
+
+FINAL VERDICT — choose exactly one:
+PASS        — zero spatial errors, zero forbidden, zero hallucinations, zero major material mismatches, zero consistency fails.
+MINOR FIXES — list the exact 1-2 small items to edit.
+REGENERATE  — any consistency fail, any wrong spatial position, any forbidden item.
+BACK TO DESCRIBE — left/right completely mirrored OR major furniture on entirely wrong wall.
+
+A SINGLE consistency fail on any furniture piece or material = REGENERATE.
+
+Output only. No suggestions. No commentary.{% endif %}</div>
+
+              <div class="prompt-actions">
+                <button class="btn btn-primary btn-sm" onclick="copyText('promptCBox-{{ pov_key }}', this)">📋 Copy Prompt C{{ '1' if is_first_pov else '2' }}</button>
+                <a href="https://gemini.google.com" target="_blank" class="btn btn-sm" style="background:#1A73E8;color:white;">✦ Open Gemini Free →</a>
+                {% if not is_first_pov %}<span class="hint-text">Remember: attach BOTH renders to Gemini</span>{% endif %}
+              </div>
+
+              <!-- VERDICT -->
+              <div style="margin-top:1.25rem;">
+                <div style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--gray-400);margin-bottom:0.5rem;">Gemini's Verdict:</div>
+                <div class="verdict-grid" id="verdictGrid-{{ pov_key }}">
+                  <button class="verdict-btn verdict-pass" onclick="selectVerdict('{{ pov_key }}','PASS',this)">✅ PASS<br><small style="font-weight:400;font-size:0.75rem;">Zero errors — approved</small></button>
+                  <button class="verdict-btn verdict-minor" onclick="selectVerdict('{{ pov_key }}','MINOR FIXES',this)">🔧 MINOR FIXES<br><small style="font-weight:400;font-size:0.75rem;">1–2 small edits needed</small></button>
+                  <button class="verdict-btn verdict-regen" onclick="selectVerdict('{{ pov_key }}','REGENERATE',this)">🔄 REGENERATE<br><small style="font-weight:400;font-size:0.75rem;">Discard, re-generate with same JSON</small></button>
+                  <button class="verdict-btn verdict-back" onclick="selectVerdict('{{ pov_key }}','BACK TO DESCRIBE',this)">↩ BACK TO DESCRIBE<br><small style="font-weight:400;font-size:0.75rem;">Restart Prompt A for this POV</small></button>
+                </div>
+                <div class="verdict-note" id="verdictNote-{{ pov_key }}"></div>
+                <div style="margin-top:0.75rem;" id="verdictSubmitWrap-{{ pov_key }}" style="display:none;">
+                  <button class="btn btn-gold btn-sm" id="verdictSubmitBtn-{{ pov_key }}" onclick="submitVerdict('{{ pov_key }}')" disabled>
+                    Record Verdict →
+                  </button>
+                </div>
+              </div>
+            {% endif %}
+
+          </div>
+        </div><!-- /step 2d -->
+
+        {% if p and p.qc_result == 'pass' %}
+        <div style="background:#F0FDF4;border:2px solid var(--success);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-top:0.875rem;font-weight:700;color:var(--success);">
+          ✅ POV-{{ pov_key }} complete and locked. Move to the next POV.
+        </div>
+        {% endif %}
+
+      </div><!-- /pov-panel -->
+      {% endfor %}
+
+    </div><!-- /pov card -->
+
+  </div><!-- /exec-right -->
+</div><!-- /exec-wrap -->
+
+<script>
+const ORDER_ID = {{ order.id }};
+const CSRF = '{{ csrf_token() }}';
+const RENDER_COUNT = {{ render_count }};
+const ICONS = {success:'✅',error:'❌',warning:'⚠️',info:'ℹ️'};
+
+let gateState = {1: null, 2: null};
+let verdictState = {}; // pov_key -> verdict string
+let povDone = {};
+
+{% for pov_key in povs %}
+  {% set pov_step = [] %}
+  {% for s in all_steps %}{% if s.pov == pov_key %}{% if pov_step.append(s) %}{% endif %}{% endif %}{% endfor %}
+  {% set p = pov_step[0] if pov_step else none %}
+  povDone['{{ pov_key }}'] = {{ 'true' if (p and p.qc_result == 'pass') else 'false' }};
+{% endfor %}
+
+// ── STAGE 0 UPLOAD ──
+function uploadLabeledPlan(e, pov) {
+  const file = e.target.files ? e.target.files[0] : null;
+  if(!file) return;
+  const formData = new FormData();
+  formData.append('order_id', ORDER_ID);
+  formData.append('pov', pov);
+  formData.append('plan', file);
+  
+  toast('Uploading labeled plan...', 'info');
+  fetch('/api/pilot/upload-labeled-plan', {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF},
+    body: formData
+  }).then(r=>r.json()).then(d=>{
+    if(d.success) {
+      toast('Labeled plan saved!', 'success');
+      setTimeout(()=>window.location.reload(), 800);
+    } else toast(d.error || 'Upload failed', 'error');
+  }).catch(()=>toast('Network error', 'error'));
+}
+
+function handleDropPlan(e, pov) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('dragover');
+  if(e.dataTransfer.files && e.dataTransfer.files[0]) {
+    const dt = new DataTransfer();
+    dt.items.add(e.dataTransfer.files[0]);
+    e.currentTarget.querySelector('input').files = dt.files;
+    uploadLabeledPlan({target: {files: dt.files}}, pov);
+  }
+}
+
+// ── M-4: escape helper for any server/user data inserted via innerHTML ──
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ── TOAST (M-4: message set via textContent — no HTML injection) ──
+function toast(msg, type='info') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  const icon = document.createElement('span');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = ICONS[type] || 'ℹ️';
+  const text = document.createElement('span');
+  text.textContent = msg;
+  t.append(icon, text);
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => { t.style.animation='fadeOut 0.3s forwards'; setTimeout(()=>t.remove(),300); }, 3500);
+}
+
+// ── COPY TEXT ──
+function copyText(elemId, btn) {
+  const el = document.getElementById(elemId);
+  if (!el) return;
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    const orig = btn ? btn.textContent : '';
+    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(() => btn.textContent = orig, 2000); }
+    toast('Copied to clipboard!', 'success');
+  }).catch(() => toast('Copy failed — select text manually', 'error'));
+}
+
+// ── C0 FLOW PROMPT ──
+function updateFlowPromptBox(pov, json) {
+  const box = document.getElementById('promptC0Box-' + pov);
+  if(!box) return;
+  if(!json) {
+    box.innerHTML = '<span style="color:#64748B;font-style:italic;">← Save JSON above to assemble this prompt</span>';
+    document.getElementById('copyC0Btn-' + pov).disabled = true;
+    return;
+  }
+  box.textContent = `Convert the following JSON into a natural-language image generation prompt for Google Flow.
+
+Build the prompt in this exact order:
+1. SHOT SETUP (one sentence):
+   "16:9 hyperrealistic interior photograph. [camera_position + camera_direction]. Room: {{ order.name }}. Dimensions: [room_dimensions]."
+2. SCENE — describe left-to-right, back-to-front:
+   For EACH item in furniture_facing: "[Item] — [pressed_against wall], facing [direction]."
+   Include every item from left_top through right_bottom.
+   Include every wall_opening with its wall position.
+3. MATERIALS PARAGRAPH:
+   "Floor: [floor_material]. Walls: [wall_finish]. Ceiling: [ceiling_finish].
+    Lighting: [lighting]. Textiles: [textiles]. Accent: [accent_element]."
+4. FORBIDDEN PARAGRAPH:
+   "DO NOT include any of the following: [list every item from forbidden array]. None of these must appear anywhere in the image."
+5. TECHNICAL CLOSE:
+   "Strict spatial layout. Photographic quality. Natural lighting. No lens distortion."
+${pov !== 'A' ? `6. "All furniture pieces, materials, colors, and finishes must be IDENTICAL to the reference image attached. Camera angle is the only change — nothing else changes."` : ''}
+
+JSON:
+${json}
+
+Output the natural-language prompt only. No JSON. No commentary.`;
+  document.getElementById('copyC0Btn-' + pov).disabled = false;
+}
+function copyFlowPromptC0(pov) {
+  copyText('promptC0Box-' + pov, document.getElementById('copyC0Btn-' + pov));
+}
+function saveFlowPrompt(pov) {
+  const flow_prompt = document.getElementById('flowPromptOut-' + pov)?.value.trim();
+  if(!flow_prompt) { toast('Paste the Flow prompt first.', 'error'); return; }
+  fetch('/api/pilot/save-flow-prompt', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({ order_id: ORDER_ID, pov, flow_prompt })
+  }).then(r=>r.json()).then(d=>{
+    if(d.success) toast('Flow prompt saved.', 'success');
+  });
+}
+
+// ── COPY PROMPT B ──
+function copyPromptB(pov) {
+  copyText('promptBBox-' + pov, document.getElementById('copyBBtn-' + pov));
+}
+
+// ── TOGGLE PROMPT A ──
+function togglePromptA(toggle) {
+  toggle.classList.toggle('open');
+  const body = document.getElementById('promptABody');
+  body.classList.toggle('open');
+}
+
+// ── A1B AUTO-ASSEMBLE ──
+function updateA1bBox() {
+  const wallInv = document.getElementById('wallInventoryOutput')?.value.trim();
+  const box = document.getElementById('promptA1bText');
+  const btn = document.getElementById('copyA1bBtn');
+  if(!wallInv || !box) return;
+  if(!wallInv) {
+     box.innerHTML = '<span style="color:#64748B;font-style:italic;">← Paste Wall Inventory (A1a) above to assemble this prompt</span>';
+     if(btn) btn.disabled = true;
+     return;
+  }
+  let povCount = RENDER_COUNT;
+  let povs = "";
+  let povLabels = ['A','B','C','D','E','F'];
+  for(let i=0; i<povCount; i++) {
+     povs += `=== POV-${povLabels[i]} ===
+[same format as basics and zones]
+
+`;
+  }
+  box.textContent = `You are looking at the attached floor plan.
+The red X marks the camera position. The red arrow shows the direction the camera is facing.
+These are REFERENCE MARKS ONLY — not real objects inside the room.
+
+The following WALL INVENTORY has already been approved as correct.
+Treat it as ground truth. Do not add or remove any items.
+
+[PASTE APPROVED A1a WALL INVENTORY HERE]
+${wallInv}
+
+Describe what would be visible in a 16:9 wide-angle photo taken from that camera position.
+Use ONLY items from the wall inventory above. Fill every line.
+
+Output using these exact labels for EACH POV separately:
+${povs}
+====================================================
+BASICS
+====================================================
+ROOM:             {{ order.name }}
+DIMENSIONS:       [as labeled on plan, or "not labeled"]
+CAMERA POSITION:  [plain words — e.g. near entry door, south wall]
+CAMERA DIRECTION: [plain words — e.g. facing north toward balcony wall]
+
+====================================================
+FRAME EDGES  (the 4 sides of the 16:9 photo)
+====================================================
+TOP FRAME / FRONT OF SIGHT:  [deepest/farthest wall or opening the camera sees]
+BACK OF SIGHT / BOTTOM FRAME:[what sits closest to camera at the bottom edge]
+LEFT WALL:                   [which real wall (N/S/E/W) + what is on it]
+RIGHT WALL:                  [which real wall (N/S/E/W) + what is on it]
+
+====================================================
+GRID ZONES  (7 zones inside the photo)
+====================================================
+LEFT TOP:     [items in upper-left of photo]
+LEFT CENTER:  [items in middle-left of photo]
+LEFT BOTTOM:  [items in lower-left / front-left of photo]
+CENTER:       [items in the center of the photo]
+RIGHT TOP:    [items in upper-right of photo]
+RIGHT CENTER: [items in middle-right of photo]
+RIGHT BOTTOM: [items in lower-right / front-right of photo]
+
+====================================================
+FURNITURE FACING  (one line per piece — MANDATORY)
+====================================================
+Format: [Item] — [edge] pressed against [Left Wall / Right Wall / Top-Frame wall / Back-of-Sight wall / free-standing] — facing [Left / Right / Top Frame / Back of Sight]
+
+====================================================
+WALL OPENINGS
+====================================================
+For EACH door / window / balcony / niche:
+[Opening type] on [Left / Right / Top Frame / Back of Sight] wall
+
+====================================================
+CEILING & FLOOR
+====================================================
+CEILING FIXTURES:      [pendants, fans, beams, skylights]
+FLOOR-LEVEL FEATURES:  [level changes, sunken area, voids — or "none"]
+
+RULES:
+- Do NOT invent items not shown on the plan.
+- Red X and red arrow are camera marks. NEVER list them.
+- If unsure, write "unsure" — do not guess.
+- Every furniture piece MUST have BOTH a grid-zone entry AND a facing-direction entry.
+
+Output only.`;
+  if(btn) btn.disabled = false;
+}
+function copyA1b() {
+  copyText('promptA1bText', document.getElementById('copyA1bBtn'));
+}
+
+document.getElementById('wallInventoryOutput')?.addEventListener('input', updateA1bBox);
+
+// ── GATES ──
+function setGate(num, val, btn) {
+  gateState[num] = val;
+  const row = btn.closest('.gate-row');
+  row.querySelectorAll('.gate-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  const hint = document.getElementById('gate' + num + 'Hint');
+  if (hint) hint.style.display = (val === 'no') ? 'block' : 'none';
+
+  if (num === 1 && val === 'yes') {
+    document.getElementById('savePromptABlock').style.display = 'block';
+  }
+  if (num === 1 && val === 'no') {
+    document.getElementById('savePromptABlock').style.display = 'none';
+  }
+}
+
+// ── SAVE PROMPT A ──
+function savePromptA() {
+  const output = document.getElementById('promptAOutput').value.trim();
+  const wall_inventory = document.getElementById('wallInventoryOutput').value.trim();
+  const moodboard_materials = document.getElementById('moodboardOutput').value.trim();
+  if (!output || !wall_inventory || !moodboard_materials) { toast('Complete all A1 textareas first.', 'error'); return; }
+  fetch('/api/pilot/save-prompt-a', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({ order_id: ORDER_ID, output, wall_inventory, moodboard_materials })
+  }).then(r => r.json()).then(d => {
+    if (d.success) {
+      document.getElementById('promptASaveStatus').textContent = '✅ Saved';
+      toast('Stage A output saved!', 'success');
+      // Auto-populate all pov section textareas from the saved output
+      autoPopulatePovSections(output);
+    } else toast(d.error || 'Error saving', 'error');
+  }).catch(() => toast('Network error', 'error'));
+}
+
+// ── AUTO-POPULATE POV SECTIONS ──
+function autoPopulatePovSections(fullOutput) {
+  const povKeys = ['A','B','C','D','E','F'];
+  povKeys.forEach(key => {
+    const ta = document.getElementById('povSection-' + key);
+    if (!ta || ta.value.trim()) return; // don't overwrite existing
+    // Extract === POV-KEY === section
+    const regex = new RegExp('===\\s*POV-' + key + '\\s*===[\\s\\S]*?(?====\\s*POV-|$)', 'i');
+    const match = fullOutput.match(regex);
+    if (match) {
+      ta.value = match[0].trim();
+      // Rebuild Prompt B box
+      updatePromptBBox(key, match[0].trim());
+    }
+  });
+}
+
+// ── SWITCH POV ──
+function switchPov(pov, btn) {
+  document.querySelectorAll('.pov-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.pov-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + pov).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── SAVE POV SECTION ──
+function savePovSection(pov) {
+  const section = document.getElementById('povSection-' + pov)?.value.trim();
+  if (!section) { toast('Paste the POV-' + pov + ' section first.', 'error'); return; }
+  fetch('/api/pilot/spatial', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({ order_id: ORDER_ID, pov, pov_section: section })
+  }).then(r => r.json()).then(d => {
+    if (d.success) {
+      updatePromptBBox(pov, section);
+      document.getElementById('copyBBtn-' + pov).disabled = false;
+      toast('POV-' + pov + ' section saved. Prompt B assembled below.', 'success');
+    } else toast(d.error || 'Error', 'error');
+  }).catch(() => toast('Network error', 'error'));
+}
+
+// ── UPDATE PROMPT B BOX ──
+function updatePromptBBox(pov, section) {
+  const box = document.getElementById('promptBBox-' + pov);
+  if (!box) return;
+  const moodboard = document.getElementById('moodboardOutput')?.value.trim() || 'No moodboard details';
+  box.textContent = `You are an architectural visualization assistant.
+
+Below is an approved spatial description and materials spec for one POV of an interior room. Convert it into a structured JSON image-generation prompt.
+
+APPROVED DESCRIPTION — START
+${section}
+APPROVED DESCRIPTION — END
+
+APPROVED MATERIALS — START
+${moodboard}
+APPROVED MATERIALS — END
+
+---
+
+Convert the above into a single JSON image-generation spec using EXACTLY these keys.
+Do not add or remove keys.
+Spatial keys come from the POV description file ONLY.
+Material keys come from the moodboard materials file ONLY. Do not mix sources.
+
+{
+  "view": "16:9 wide-angle photorealistic interior render",
+  "camera_position": "[copy from CAMERA POSITION]",
+  "camera_direction": "[copy from CAMERA DIRECTION]",
+  "top_frame": ["[item]"],
+  "back_of_sight": ["[item]"],
+  "left_wall": "...",
+  "right_wall": "...",
+  "left_top": ["[item]"],
+  "left_center": ["[item]"],
+  "left_bottom": ["[item]"],
+  "center": ["[item]"],
+  "right_top": ["[item]"],
+  "right_center": ["[item]"],
+  "right_bottom": ["[item]"],
+  "furniture_facing": [
+    { "item": "...", "pressed_against": "Left Wall (west)", "facing": "Right (east)" }
+  ],
+  "wall_openings": ["[item]"],
+  "ceiling_fixtures": ["[item]"],
+  "floor_features": ["[item]"],
+  "style":               "[copy from STYLE]",
+  "floor_material":      "[copy from FLOOR]",
+  "wall_finish":         "[copy from WALLS]",
+  "ceiling_finish":      "[copy from CEILING]",
+  "primary_furniture":   "[copy from PRIMARY FURNITURE]",
+  "lighting":            "[copy from LIGHTING]",
+  "accent_element":      "[copy from ACCENT ELEMENT]",
+  "textiles":            "[copy from TEXTILES]",
+  "must_match_attached_plan": true,
+  "must_match_previous_pov_for_furniture_and_materials": ${pov==='A' ? 'false' : 'true'},
+  "forbidden": ["[copy every item from FORBIDDEN list exactly]"]
+}
+
+Output the JSON only. Nothing else.`;
+  updateCPromptBox(pov, section, document.getElementById('promptBJson-' + pov)?.value || '');
+  updateFlowPromptBox(pov, document.getElementById('promptBJson-' + pov)?.value || '');
+}
+
+// ── UPDATE C PROMPT BOX ──
+function updateCPromptBox(pov, description, json) {
+  const box = document.getElementById('promptCBox-' + pov);
+  if (!box) return;
+  const isFirstPov = (pov === 'A');
+  if(isFirstPov) {
+      box.textContent = `You are a quality control checker for architectural interior renders.
+
+Attached: one render image. Check it against the approved specification below.
+
+APPROVED DESCRIPTION — START
+${description}
+APPROVED DESCRIPTION — END
+
+APPROVED JSON — START
+${json}
+APPROVED JSON — END
+
+---
+
+SPATIAL CHECK:
+For every item in furniture_facing and every grid zone in the JSON:
+[item] — CORRECT / WRONG POSITION (describe) / MISSING / EXTRA (not in spec)
+
+MATERIALS CHECK:
+FLOOR        — MATCHES / DIFFERS: [describe]
+WALLS        — MATCHES / DIFFERS: [describe]
+FURNITURE    — MATCHES / DIFFERS: [describe]
+LIGHTING     — MATCHES / DIFFERS: [describe]
+ACCENT       — MATCHES / DIFFERS / N/A
+
+FORBIDDEN CHECK:
+List any forbidden item visible in the render, or write "none."
+
+HALLUCINATION CHECK:
+List any item visible in the render that is NOT in the approved spec, or write "none."
+
+FINAL VERDICT — choose exactly one:
+PASS        — zero spatial errors, zero forbidden, zero hallucinations, zero major material mismatches.
+MINOR FIXES — list the exact 1-2 small items to edit.
+REGENERATE  — any wrong spatial position, any forbidden item, 3+ total issues.
+BACK TO DESCRIBE — left/right completely mirrored OR major furniture on entirely wrong wall.
+
+Output only. No suggestions. No commentary.`;
+  } else {
+      box.textContent = `You are a quality control checker for architectural interior renders.
+
+Attached:
+- Image 1: the new render to check (POV-${pov})
+- Image 2: the approved render from POV-A — FURNITURE TRUTH. Every piece of furniture, material, and color in Image 1 must exactly match Image 2.
+
+APPROVED DESCRIPTION FOR IMAGE 1 — START
+${description}
+APPROVED DESCRIPTION — END
+
+APPROVED JSON FOR IMAGE 1 — START
+${json}
+APPROVED JSON — END
+
+---
+
+SPATIAL CHECK:
+For every item in furniture_facing and every grid zone in the JSON:
+[item] — CORRECT / WRONG POSITION (describe) / MISSING / EXTRA (not in spec)
+
+MATERIALS CHECK:
+FLOOR        — MATCHES / DIFFERS: [describe]
+WALLS        — MATCHES / DIFFERS: [describe]
+FURNITURE    — MATCHES / DIFFERS: [describe]
+LIGHTING     — MATCHES / DIFFERS: [describe]
+ACCENT       — MATCHES / DIFFERS / N/A
+
+CONSISTENCY CHECK (Image 1 vs Image 2):
+For every furniture piece and material visible in both images:
+[item] — IDENTICAL / CONSISTENCY FAIL: [describe the difference]
+
+FORBIDDEN CHECK:
+List any forbidden item visible in the render, or write "none."
+
+HALLUCINATION CHECK:
+List any item visible in the render that is NOT in the approved spec, or write "none."
+
+FINAL VERDICT — choose exactly one:
+PASS        — zero spatial errors, zero forbidden, zero hallucinations, zero major material mismatches, zero consistency fails.
+MINOR FIXES — list the exact 1-2 small items to edit.
+REGENERATE  — any consistency fail, any wrong spatial position, any forbidden item.
+BACK TO DESCRIBE — left/right completely mirrored OR major furniture on entirely wrong wall.
+
+A SINGLE consistency fail on any furniture piece or material = REGENERATE.
+
+Output only. No suggestions. No commentary.`;
+  }
+}
+
+// ── SAVE PROMPT B JSON ──
+function savePromptB(pov) {
+  const promptB = document.getElementById('promptBJson-' + pov)?.value.trim();
+  if (!promptB) { toast('Paste the JSON from Gemini first.', 'error'); return; }
+  fetch('/api/pilot/save-prompt-b', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({ order_id: ORDER_ID, pov, prompt_b: promptB })
+  }).then(r => r.json()).then(d => {
+    if (d.success) toast('JSON saved for POV-' + pov, 'success');
+    else toast(d.error || 'Error', 'error');
+  }).catch(() => toast('Network error', 'error'));
+}
+
+// ── UPLOAD RENDER ──
+function uploadRender(event, pov) {
+  const file = event.target.files[0];
+  if (file) doUpload(file, pov);
+}
+function handleDrop(event, pov) {
+  event.preventDefault();
+  document.getElementById('uploadZone-' + pov)?.classList.remove('dragover');
+  const file = event.dataTransfer.files[0];
+  if (file) doUpload(file, pov);
+}
+function doUpload(file, pov) {
+  if (!file.type.startsWith('image/')) { toast('Upload an image file.', 'error'); return; }
+  if (file.size > 10 * 1024 * 1024) { toast('File too large (max 10MB).', 'error'); return; }
+  // Local preview
+  const reader = new FileReader();
+  reader.onload = e => {
+    let preview = document.getElementById('renderPreview-' + pov);
+    if (preview) {
+      preview.style.display = 'block';
+      preview.innerHTML = `<img src="${e.target.result}" alt="Preview"><div style="font-size:0.75rem;color:var(--gray-400);text-align:center;margin-top:0.3rem;">Uploading…</div>`;
+    }
+  };
+  reader.readAsDataURL(file);
+  const fd = new FormData();
+  fd.append('render', file);
+  fd.append('order_id', ORDER_ID);
+  fd.append('pov', pov);
+  toast('Uploading render…', 'info');
+  fetch('/api/pilot/upload-render', { method:'POST', headers:{'X-CSRFToken': CSRF}, body:fd })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      toast('Render uploaded! Now run QC.', 'success');
+      let preview = document.getElementById('renderPreview-' + pov);
+      if (preview) {
+        preview.innerHTML = `<img src="${escHtml(d.url || '')}" alt="Render POV-${escHtml(pov)}" onerror="this.style.display='none'"><div style="font-size:0.79rem;color:var(--gray-500);text-align:center;margin-top:0.3rem;">${escHtml(d.filename)}</div>`;
+      }
+      // Activate QC step
+      const qcCard = document.getElementById('step2d-' + pov);
+      if (qcCard) qcCard.classList.add('active');
+    } else toast(d.error || 'Upload failed', 'error');
+  })
+  .catch(() => toast('Upload error.', 'error'));
+}
+
+// ── VERDICT ──
+function selectVerdict(pov, verdict, btn) {
+  const grid = document.getElementById('verdictGrid-' + pov);
+  grid.querySelectorAll('.verdict-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  verdictState[pov] = verdict;
+
+  const noteEl = document.getElementById('verdictNote-' + pov);
+  const notes = {
+    'PASS': '✅ Save the render as approved. Move to next POV.',
+    'MINOR FIXES': '🔧 Edit in your image gen tool (color/accessory only). Re-upload and re-run QC.',
+    'REGENERATE': '🔄 Discard this render. Generate again with the same JSON. Re-upload. After 3 fails → go back to Prompt A.',
+    'BACK TO DESCRIBE': '↩ Start over from Prompt A for this POV. Note which wall was wrong in your correction.'
+  };
+  if (noteEl) { noteEl.textContent = notes[verdict] || ''; noteEl.style.display = 'block'; }
+
+  const submitBtn = document.getElementById('verdictSubmitBtn-' + pov);
+  const submitWrap = document.getElementById('verdictSubmitWrap-' + pov);
+  if (submitBtn) submitBtn.disabled = false;
+  if (submitWrap) submitWrap.style.display = 'block';
+}
+
+function submitVerdict(pov) {
+  const verdict = verdictState[pov];
+  if (!verdict) { toast('Select a verdict first.', 'error'); return; }
+  const btn = document.getElementById('verdictSubmitBtn-' + pov);
+  btn.disabled = true; btn.textContent = 'Saving…';
+  fetch('/api/pilot/qc', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({ order_id: ORDER_ID, pov, verdict })
+  }).then(r => r.json()).then(d => {
+    if (d.result === 'pass') {
+      povDone[pov] = true;
+      // Mark tab done
+      const tab = document.querySelector(`.pov-tab[data-pov="${pov}"]`);
+      if (tab) { tab.classList.add('done'); tab.textContent = 'POV-' + pov + ' ✓'; }
+      updateProgress();
+      toast('POV-' + pov + ' passed QC! 🎉', 'success');
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      btn.disabled = false; btn.textContent = 'Record Verdict →';
+      toast('Verdict recorded: ' + verdict, 'info');
+      setTimeout(() => location.reload(), 800);
+    }
+    if (d.all_passed) {
+      setTimeout(() => { toast('🎉 All POVs done! Job submitted for admin review.', 'success'); }, 800);
+    }
+  }).catch(() => { btn.disabled = false; btn.textContent = 'Record Verdict →'; toast('Network error', 'error'); });
+}
+
+// ── PROGRESS ──
+function updateProgress() {
+  const done = Object.values(povDone).filter(Boolean).length;
+  const pct = Math.round((done / RENDER_COUNT) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = done + ' of ' + RENDER_COUNT + ' renders complete';
+  const allDone = done >= RENDER_COUNT;
+  document.getElementById('completeBtn').disabled = !allDone;
+  document.getElementById('completeHint').style.display = allDone ? 'none' : 'block';
+}
+
+// ── COMPLETE JOB ──
+function completeJob() {
+  if (!confirm('Mark this job complete and send to admin for final review?')) return;
+  fetch('/api/pilot/complete', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({ order_id: ORDER_ID })
+  }).then(r => r.json()).then(d => {
+    if (d.success) { toast('Job submitted! 🎉', 'success'); setTimeout(() => window.location = '/pilot/dashboard', 1500); }
+    else toast(d.error || 'Error', 'error');
+  }).catch(() => toast('Network error', 'error'));
+}
+
+// ── RESTART JOB ──
+function restartJob() {
+  if (!confirm('⚠️ WARNING: Are you sure you want to completely restart this job? This will wipe all current dashboard progress and cannot be undone!')) return;
+  
+  const btn = document.getElementById('restartBtn');
+  if(btn) { btn.disabled = true; btn.textContent = 'Restarting...'; }
+  
+  fetch('/api/pilot/restart-job', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({ order_id: ORDER_ID })
+  }).then(r => r.json()).then(d => {
+    if (d.success) {
+      toast('Dashboard reset successfully! Reloading...', 'success');
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      toast(d.error || 'Failed to restart job', 'error');
+      if(btn) { btn.disabled = false; btn.innerHTML = '🔄 Restart Dashboard'; }
+    }
+  }).catch(() => {
+    toast('Network error', 'error');
+    if(btn) { btn.disabled = false; btn.innerHTML = '🔄 Restart Dashboard'; }
+  });
+}
+
+// ── INIT ──
+updateProgress();
+
+// Auto-assemble map prompts when pilot pastes into the textarea
+document.getElementById('promptAOutput')?.addEventListener('input', function() {
+  const val = this.value.trim();
+  if (val) assembleMapPrompts(val);
+});
+
+// If Prompt A was already saved, restore full UI state on load
+{% if prompt_a_saved %}
+  document.getElementById('savePromptABlock').style.display = 'block';
+  updateA1bBox();
+{% endif %}
+
+// Live update Prompt B box when pilot types in POV section textarea
+document.querySelectorAll('[id^="povSection-"]').forEach(ta => {
+  ta.addEventListener('input', () => {
+    const pov = ta.id.replace('povSection-', '');
+    const val = ta.value.trim();
+    if (val) {
+      updatePromptBBox(pov, val);
+      const copyBtn = document.getElementById('copyBBtn-' + pov);
+      if (copyBtn) copyBtn.disabled = false;
+    }
+  });
+});
+
+document.querySelectorAll('[id^="promptBJson-"]').forEach(ta => {
+  ta.addEventListener('input', () => {
+    const pov = ta.id.replace('promptBJson-', '');
+    updateFlowPromptBox(pov, ta.value.trim());
+    updateCPromptBox(pov, document.getElementById('povSection-'+pov)?.value, ta.value.trim());
+  });
+});
+</script>
+<script src="{{ url_for('static', filename='js/mobile.js') }}" defer></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+django>=5.0
+django-cors-headers>=4.0
+werkzeug>=3.0          # password hashing + secure_filename (parity with Flask app)
+python-dotenv>=1.0
+requests>=2.31         # Brevo / MSG91 OTP delivery
+pillow>=10.0           # hero image resize + upload content checks
+pillow-heif>=0.13      # decode iPhone HEIC/HEIF uploads → converted to JPEG on save
+gunicorn>=21.2         # production WSGI server
+jinja2>=3.0            # render legacy pilot workflow template server-side

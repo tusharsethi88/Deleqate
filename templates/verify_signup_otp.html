@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verify Email — Deleqate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+  body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--surface-low);}
+  .auth-box{background:var(--white);border-radius:var(--radius-xl);box-shadow:var(--shadow-lg);padding:2.5rem;width:100%;max-width:420px;margin:1rem;text-align:center;}
+  .auth-logo{display:flex;justify-content:center;margin-bottom:0.5rem;}
+  .auth-logo img, .auth-logo video{height:94px;width:auto;display:block;mix-blend-mode:multiply;}
+  
+  .otp-inputs{display:flex;gap:0.5rem;justify-content:center;margin:1.5rem 0;}
+  .otp-inputs input{width:48px;height:56px;text-align:center;font-size:1.5rem;font-weight:700;border:2px solid var(--gray-200);border-radius:var(--radius);color:var(--navy);outline:none;transition:border-color 0.15s;}
+  .otp-inputs input:focus{border-color:var(--gold);}
+  @media(max-width:480px){
+    body{ align-items:flex-start; padding-top:2rem; }
+    .auth-box{ padding:1.5rem 1.125rem !important; margin:.75rem !important; }
+    .otp-inputs input{ width:40px; height:48px; font-size:1.25rem; }
+  }
+</style>
+</head>
+<body>
+<div class="auth-box">
+  <div class="auth-logo"><video src="{{ url_for('static', filename='img/logo.mp4') }}" autoplay loop muted playsinline></video></div>
+  <div style="font-size:2rem;margin:1rem 0;">📧</div>
+  <div style="font-weight:700;font-size:1.1rem;color:var(--navy);margin-bottom:0.4rem;">Verify your email</div>
+  <div style="font-size:0.875rem;color:var(--gray-500);margin-bottom:0.25rem;">
+    We sent a 6-digit code to
+  </div>
+  <div style="font-size:0.9rem;font-weight:700;color:var(--navy);margin-bottom:1.25rem;">{{ email }}</div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ 'danger' if cat == 'error' else ('success' if cat == 'success' else 'info') }}" style="text-align:left;">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('verify_signup_otp') }}" id="otp-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="otp-inputs">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d0" autofocus>
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d1">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d2">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d3">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d4">
+      <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="d5">
+    </div>
+    <input type="hidden" name="otp" id="otp-hidden">
+    <button type="submit" class="btn btn-primary btn-full">Verify &amp; Create Account →</button>
+  </form>
+
+  <p style="margin-top:1.25rem;font-size:0.8rem;color:var(--gray-400);">
+    Didn't receive it? Check your spam folder or
+    <a href="{{ url_for('signup') }}" style="color:var(--navy);font-weight:600;">try again</a>.
+  </p>
+</div>
+<script>
+const digits = [0,1,2,3,4,5].map(i => document.getElementById('d'+i));
+digits.forEach((inp, i) => {
+  inp.addEventListener('input', () => {
+    inp.value = inp.value.replace(/\D/g,'').slice(-1);
+    if (inp.value && i < 5) digits[i+1].focus();
+    syncHidden();
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !inp.value && i > 0) digits[i-1].focus();
+  });
+  inp.addEventListener('paste', e => {
+    e.preventDefault();
+    const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g,'');
+    paste.split('').slice(0,6).forEach((ch,j) => { if(digits[j]) digits[j].value = ch; });
+    syncHidden();
+    const next = Math.min(paste.length, 5);
+    digits[next].focus();
+  });
+});
+function syncHidden(){
+  document.getElementById('otp-hidden').value = digits.map(d=>d.value).join('');
+}
+document.getElementById('otp-form').addEventListener('submit', function(e){
+  syncHidden();
+  if(document.getElementById('otp-hidden').value.length < 6){
+    e.preventDefault();
+    digits[0].focus();
+  }
+});
+</script>
+<script src="{{ url_for('static', filename='js/mobile.js') }}" defer></script>
+</body>
+</html>
