@@ -151,6 +151,7 @@ small { font-size: 0.8125rem; }
 }
 .navbar-brand span { color: var(--navy); }
 .navbar-brand img, .navbar-brand video { height: 84px; width: auto; display: block; mix-blend-mode: multiply; }
+.navbar-brand .brand-logo-svg { height: 52px; width: auto; display: block; }
 .navbar-nav { display: flex; align-items: center; gap: 2rem; }
 .navbar-nav a {
   font-size: 0.875rem;
@@ -1299,6 +1300,7 @@ input, select, textarea, button {
   .navbar { height: 60px; padding: 0 1rem; }
   .navbar-brand { font-size: 1.125rem; }
   .navbar-brand img, .navbar-brand video { height: 40px; }
+  .navbar-brand .brand-logo-svg { height: 34px; }
   .navbar-nav { top: 60px; }
 
   /* ── Hero ── */

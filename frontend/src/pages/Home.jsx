@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiGet, fileUrl } from '../api.js';
+import AnimatedLogo from '../components/AnimatedLogo.jsx';
 
 const heroCss = `
 #heroSection{position:relative;width:100%;aspect-ratio:2752/1536;min-height:400px;overflow:hidden;background:#0c0a08;display:block;}
@@ -311,7 +312,7 @@ export default function Home({ session }) {
 
       {/* NAVBAR */}
       <nav className="navbar">
-        <Link to="/" className="navbar-brand"><img src="/img/logo.png" alt="Delegate" /></Link>
+        <Link to="/" className="navbar-brand"><AnimatedLogo /></Link>
         <button className={`nav-toggle ${navOpen ? 'open' : ''}`} aria-label="Open menu" aria-expanded={navOpen} onClick={() => setNavOpen(o => !o)}>
           <span></span><span></span><span></span>
         </button>
