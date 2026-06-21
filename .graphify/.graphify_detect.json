@@ -1,0 +1,46 @@
+{
+  "files": {
+    "code": [
+      "app.py"
+    ],
+    "document": [
+      "CLAUDE.md",
+      "templates/admin.html",
+      "templates/client_dashboard.html",
+      "templates/index.html",
+      "templates/login.html",
+      "templates/login_phone.html",
+      "templates/order_detail.html",
+      "templates/order_success.html",
+      "templates/order_wizard.html",
+      "templates/pilot_dashboard.html",
+      "templates/pilot_execute.html",
+      "templates/pilot_sku_workflow.html",
+      "templates/signup.html",
+      "templates/verify_otp.html"
+    ],
+    "paper": [],
+    "image": [],
+    "video": []
+  },
+  "total_files": 15,
+  "total_words": 34910,
+  "needs_graph": false,
+  "warning": "Corpus is ~34,910 words - fits in a single context window. You may not need a graph.",
+  "skipped_sensitive": [],
+  "graphifyignore_patterns": 13,
+  "scope": {
+    "requested_mode": "all",
+    "resolved_mode": "all",
+    "source": "configured-default",
+    "root": ".",
+    "candidate_count": null,
+    "included_count": 15,
+    "excluded_untracked_count": 0,
+    "excluded_ignored_count": 0,
+    "excluded_sensitive_count": 0,
+    "missing_committed_count": 0,
+    "warnings": [],
+    "recommendation": null
+  }
+}

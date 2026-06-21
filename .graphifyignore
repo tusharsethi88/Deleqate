@@ -1,0 +1,14 @@
+# Exclude deliverables and uploads (binary/media files)
+deliverables/
+uploads/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.pdf
+*.docx
+*.db
+*.txt
+cookies.txt
+__pycache__/
+*.pyc
