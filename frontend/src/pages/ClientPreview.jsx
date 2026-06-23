@@ -148,7 +148,7 @@ export default function ClientPreview() {
     <div>
       <style>{css}</style>
       <div className="cp-top">
-        <Link to="/" className="brand"><video src="/img/logo.mp4" autoPlay loop muted playsInline /></Link>
+        <Link to="/" className="brand"><img src="/img/logo.png" alt="Delegate" /></Link>
         <span className="cp-top-order">Order #{order.id} · {d.task_label}</span>
         <Link to="/client/orders" className="back-link" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
           <i data-lucide="arrow-left" style={{ width: 14, height: 14 }}></i> Back to My Orders

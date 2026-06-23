@@ -112,7 +112,7 @@ export default function OrderDetail({ session }) {
     <div>
       <style>{css}</style>
       <div className="od-top">
-        <Link to="/" className="od-logo"><video src="/img/logo.mp4" autoPlay loop muted playsInline /></Link>
+        <Link to="/" className="od-logo"><img src="/img/logo.png" alt="Delegate" /></Link>
         <Link to="/admin/dashboard" className="od-back">← Admin Queue</Link>
         {session?.user?.name && <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#6b7280' }}>{session.user.name}</span>}
         <Link to="/logout" style={{ fontSize: '0.82rem', color: '#8B9AAB', textDecoration: 'none' }}>Logout</Link>

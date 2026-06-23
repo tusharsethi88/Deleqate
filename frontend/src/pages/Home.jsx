@@ -369,7 +369,6 @@ export default function Home({ session }) {
                 <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem' }}><span className="inline-icon"><i data-lucide="lock"></i></span><strong style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>Escrow</strong></span>
                 <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem' }}><span className="inline-icon"><i data-lucide="clock"></i></span><strong style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>SLA or refund</strong></span>
                 <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem' }}><span className="inline-icon"><i data-lucide="check-circle"></i></span><strong style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>QC reviewed</strong></span>
-                <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} /><strong style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>32 Pilots live</strong></span>
               </div>
             </div>
           </div>
@@ -432,6 +431,12 @@ export default function Home({ session }) {
                           "/img/task_holders/7/car 7.png"
                         ]}
                       />
+                    )}
+                    {s.key === 'announcement_pack' && (
+                      <div style={{ width: '100%', height: '150px', borderRadius: '6px', overflow: 'hidden', marginBottom: '1rem', background: '#1E2A39', border: '1px solid rgba(255,255,255,0.12)' }}>
+                        <img src="/img/task_holders/announcement_pack/poster.png" alt="Announcement pack sample"
+                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      </div>
                     )}
 
                     <h4>{s.title}</h4>

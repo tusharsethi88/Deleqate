@@ -11,7 +11,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from werkzeug.utils import secure_filename
 
-from core.database import get_db
+from core.database import get_db, log_status
 from core.security import safe_serve_file
 from core.business import _file_ext, _clean_label, _unique_named_path
 from core.vs_prompts import (
@@ -146,9 +146,7 @@ def api_autopilot_deliver(request, order_id):
     conn.execute(
         "UPDATE orders SET status='under_review', delivered_at=CURRENT_TIMESTAMP WHERE id=?",
         (order_id,))
-    conn.execute(
-        "INSERT INTO status_log (order_id, old_status, new_status, note) VALUES (?,?,?,?)",
-        (order_id, o['status'], 'under_review', f'AutoPilot delivered: {rel}'))
+    log_status(conn, order_id, o['status'], 'under_review', None, f'AutoPilot delivered: {rel}')
     conn.commit(); conn.close()
     return JsonResponse({'success': True, 'filename': rel})
 
@@ -181,9 +179,7 @@ def api_autopilot_qc_fail(request, order_id):
     o = conn.execute('SELECT status FROM orders WHERE id=?', (order_id,)).fetchone()
     if o:
         conn.execute("UPDATE orders SET qc_notes=?, status='rejected' WHERE id=?", (notes, order_id))
-        conn.execute(
-            "INSERT INTO status_log (order_id, old_status, new_status, note) VALUES (?,?,?,?)",
-            (order_id, o['status'], 'rejected', f'AutoPilot QC failed: {notes}'))
+        log_status(conn, order_id, o['status'], 'rejected', None, f'AutoPilot QC failed: {notes}')
         conn.commit()
     conn.close()
     return JsonResponse({'success': True})

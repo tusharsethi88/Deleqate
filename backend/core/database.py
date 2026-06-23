@@ -7,7 +7,7 @@ AutoPilot auto-assign worker, and log_status.
 import os, sqlite3, threading
 from werkzeug.security import generate_password_hash
 from .business import (
-    ADMIN_EMAIL, ADMIN_PASSWORD, IS_PRODUCTION,
+    ADMIN_EMAIL, ADMIN_PASSWORD, IS_PRODUCTION, FRONTEND_URL,
     TEST_CLIENT_PHONE, TEST_CLIENT_PIN, TEST_PILOT_EMAIL, TEST_PILOT_PASS,
     TASK_LABELS,
     PRICE_VIRTUAL_STAGING, PRICE_PROPERTY_REEL_HOOK, PRICE_PROPERTY_SOCIAL_CARD,
@@ -564,6 +564,109 @@ def start_background_workers():
         _ap_thread = threading.Thread(target=_autopilot_auto_assign_worker, daemon=True, name='autopilot-autoassign')
         _ap_thread.start()
 
+# ═══════════════════════════════════════════════════════════
+# CUSTOMER EMAIL NOTIFICATIONS  (order placed + every status change)
+# ═══════════════════════════════════════════════════════════
+# Customer-facing copy per status. Keys match the `new` status passed to
+# log_status(). Each value is (subject, body) and may use {name} {id} {task}
+# {amount} {link}. Statuses not listed fall back to a generic update email.
+# 'in_progress' is intentionally skipped (it fires right after 'assigned',
+# which already tells the customer work has started) — add it here to enable.
+STATUS_EMAILS = {
+    'pending':        ("We've received your order #{id}",
+                       "Hi {name},\n\nThanks for your order! We've received your request for {task} (₹{amount}) and it's now in our queue. A vetted Pilot will begin work shortly.\n\nTrack your order: {link}\n\n— Team Deleqate"),
+    'assigned':       ("Your order #{id} is now in progress",
+                       "Hi {name},\n\nGood news — a vetted Pilot has picked up your order for {task} and work has begun. We'll let you know the moment it's ready to preview.\n\nTrack your order: {link}\n\n— Team Deleqate"),
+    'under_review':   ("Your order #{id} is in quality review",
+                       "Hi {name},\n\nYour {task} has been completed by the Pilot and is now in our quality-check stage. Almost there!\n\nTrack your order: {link}\n\n— Team Deleqate"),
+    'delivered':      ("Your order #{id} is ready to preview",
+                       "Hi {name},\n\nYour {task} delivery is ready! Preview your files and approve to download.\n\nPreview now: {link}\n\n— Team Deleqate"),
+    'approved':       ("Payment confirmed — order #{id} complete",
+                       "Hi {name},\n\nPayment received and your {task} order is complete. Your files are unlocked for download. Thank you for choosing Deleqate!\n\nDownload: {link}\n\n— Team Deleqate"),
+    'edit_requested': ("Revisions in progress for order #{id}",
+                       "Hi {name},\n\nWe're applying the revisions you requested on your {task}. We'll notify you as soon as the updated delivery is ready.\n\nTrack your order: {link}\n\n— Team Deleqate"),
+    'rejected':       ("Your order #{id} is being refined",
+                       "Hi {name},\n\nOur QC team asked for a few improvements, so your {task} is being refined by the Pilot. No action is needed from you — we'll email you when it's ready.\n\nTrack your order: {link}\n\n— Team Deleqate"),
+}
+STATUS_EMAIL_SKIP = {'in_progress'}
+
+
+def _send_brevo_email(to_email, to_name, subject, body_txt):
+    brevo_key = os.environ.get('BREVO_API_KEY', '')
+    from_email = os.environ.get('FROM_EMAIL', 'noreply@deleqate.com')
+    if not brevo_key:
+        print(f"\n[DEV EMAIL] (BREVO_API_KEY not set) To: {to_email}\nSubj: {subject}\n{body_txt}\n", flush=True)
+        return
+    try:
+        import requests as req_lib
+        resp = req_lib.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers={'api-key': brevo_key, 'Content-Type': 'application/json'},
+            json={
+                'sender': {'name': 'Deleqate', 'email': from_email},
+                'to': [{'email': to_email, 'name': to_name or 'there'}],
+                'subject': subject,
+                'textContent': body_txt,
+            },
+            timeout=10,
+        )
+        if resp.status_code not in (200, 201, 202):
+            print(f"[EMAIL] Brevo REJECTED '{subject}' to {to_email}: "
+                  f"HTTP {resp.status_code} {resp.text}", flush=True)
+        else:
+            print(f"[EMAIL] sent '{subject}' to {to_email} (HTTP {resp.status_code})", flush=True)
+    except Exception as e:
+        print(f"[EMAIL] Brevo error sending '{subject}' to {to_email}: {e}", flush=True)
+
+
+def notify_order_status(conn, order_id, new):
+    """Email the customer about an order status change. Best-effort: never
+    raises, sends in a background thread so it can't block or break the
+    request/transaction."""
+    try:
+        if new in STATUS_EMAIL_SKIP:
+            return
+        row = conn.execute(
+            'SELECT name, email, client_email, task, total_price FROM orders WHERE id=?',
+            (order_id,)).fetchone()
+        if not row:
+            return
+        # Pick a real, deliverable email. Phone-signup customers get a synthetic
+        # placeholder like "9871722766@client.deleqate" which can't receive mail.
+        def _real(e):
+            return e and '@' in e and not e.endswith('@client.deleqate')
+        to_email = next((e for e in (row['email'], row['client_email']) if _real(e)), None)
+        if not to_email:
+            print(f"[EMAIL] order {order_id}: no real email on file "
+                  f"(email={row['email']!r}) — skipping '{new}' notification", flush=True)
+            return
+        task_label = TASK_LABELS.get(row['task'], row['task'])
+        # total_price is stored in paise (e.g. 79900 = ₹799) — show rupees.
+        _tp = row['total_price']
+        if _tp is None:
+            amount = ''
+        else:
+            _rupees = _tp / 100
+            amount = f"{_rupees:,.0f}" if _rupees == int(_rupees) else f"{_rupees:,.2f}"
+        link = f"{FRONTEND_URL.rstrip('/')}/order/{order_id}"
+        subject, body = STATUS_EMAILS.get(
+            new, ("Update on your order #{id}",
+                  "Hi {name},\n\nYour order for {task} has been updated to: " + str(new) + ".\n\nTrack your order: {link}\n\n— Team Deleqate"))
+        fields = {'name': row['name'] or 'there', 'id': order_id,
+                  'task': task_label, 'amount': amount, 'link': link}
+        subject = subject.format(**fields)
+        body = body.format(**fields)
+        threading.Thread(
+            target=_send_brevo_email,
+            args=(to_email, row['name'], subject, body),
+            daemon=True,
+        ).start()
+    except Exception as e:
+        print(f"[EMAIL] notify_order_status failed for order {order_id}: {e}")
+
+
 def log_status(conn, order_id, old, new, by=None, note=''):
     conn.execute('INSERT INTO status_log (order_id,old_status,new_status,changed_by,note) VALUES (?,?,?,?,?)',
                  (order_id, old, new, by, note))
+    if old != new:
+        notify_order_status(conn, order_id, new)

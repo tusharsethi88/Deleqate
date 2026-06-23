@@ -63,7 +63,7 @@ export default function AdminLogin() {
     <div className="adl-body">
       <style>{css}</style>
       <div className="adl-box">
-        <div className="adl-logo"><video src="/img/logo.mp4" autoPlay loop muted playsInline /></div>
+        <div className="adl-logo"><img src="/img/logo.png" alt="Delegate" /></div>
         {error && <div className="adl-alert">{error}</div>}
         <form onSubmit={submit}>
           <input type="text" name="website" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />

@@ -40,7 +40,7 @@ export default function AuthShell({ children, maxWidth, footerLinks = true, back
     <div className="auth-body">
       <style>{authStyles()}</style>
       <div className="auth-box" style={maxWidth ? { maxWidth } : undefined}>
-        <div className="auth-logo"><video src="/img/logo.mp4" autoPlay loop muted playsInline /></div>
+        <div className="auth-logo"><img src="/img/logo.png" alt="Delegate" /></div>
         {children}
         {backHome && (
           <Link to="/" className="btn btn-full"

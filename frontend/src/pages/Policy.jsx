@@ -27,7 +27,7 @@ function Body({ page, wa }) {
         <>
           <h1>About Deleqate</h1>
           <div className="policy-updated">Who we are and what we do</div>
-          <p>Deleqate is an AI-powered services platform operated by <strong>Deleqate, a sole proprietorship firm</strong>.</p>
+          <p>Deleqate is an AI-powered services platform operated by <strong>Deleqate Brand of Opuluxe, a sole proprietorship firm of Abhimanyu Dabas</strong>.</p>
           <p>Most businesses know AI can produce great creative work — but don't have the time to learn the tools, or the appetite to buy half a dozen subscriptions. Deleqate solves that. <em>You don't need to learn a single AI tool. Just Deleqate it.</em></p>
           <h2>What we deliver</h2>
           <p>We offer 12 fixed-price digital creative services across four areas:</p>
@@ -48,7 +48,7 @@ function Body({ page, wa }) {
         <>
           <h1>Terms and Conditions</h1>
           <div className="policy-updated">Last updated: 11 June 2026</div>
-          <p>These Terms and Conditions ("Terms") govern your use of www.deleqate.com (the "Website") and the services offered on it, operated by <strong>Deleqate, a sole proprietorship firm</strong> ("Deleqate", "we", "us"). By using the Website or placing an order, you agree to these Terms.</p>
+          <p>These Terms and Conditions ("Terms") govern your use of www.deleqate.com (the "Website") and the services offered on it, operated by <strong>Deleqate Brand of Opuluxe, a sole proprietorship firm of Abhimanyu Dabas</strong> ("Deleqate", "we", "us"). By using the Website or placing an order, you agree to these Terms.</p>
           <h2>1. Services</h2>
           <p>Deleqate provides fixed-price digital creative services, including virtual staging of property images, property marketing reels, property social media assets, product photo background cleanup, marketplace product listings, product lifestyle mockups, Instagram carousel design, brand demo videos, AI professional headshots, brand starter kits, menu design and podcast highlight reels. All deliverables are digital files delivered through your account dashboard. Tasks are executed by vetted specialists ("Pilots") under our standardised workflows and quality checks.</p>
           <h2>2. Accounts</h2>
@@ -80,7 +80,7 @@ function Body({ page, wa }) {
         <>
           <h1>Privacy Policy</h1>
           <div className="policy-updated">Last updated: 11 June 2026</div>
-          <p>This Privacy Policy explains how <strong>Deleqate, a sole proprietorship firm</strong> ("we", "us"), collects and uses your information when you use www.deleqate.com.</p>
+          <p>This Privacy Policy explains how <strong>Deleqate Brand of Opuluxe, a sole proprietorship firm of Abhimanyu Dabas</strong> ("we", "us"), collects and uses your information when you use www.deleqate.com.</p>
           <h2>1. Information we collect</h2>
           <ul>
             <li><strong>Account data:</strong> name, mobile number, email address and a hashed PIN/password.</li>
@@ -109,7 +109,7 @@ function Body({ page, wa }) {
         <>
           <h1>Refund &amp; Cancellation Policy</h1>
           <div className="policy-updated">Last updated: 11 June 2026</div>
-          <p>This policy applies to all orders placed on www.deleqate.com, operated by <strong>Deleqate, a sole proprietorship firm</strong>.</p>
+          <p>This policy applies to all orders placed on www.deleqate.com, operated by <strong>Deleqate Brand of Opuluxe, a sole proprietorship firm of Abhimanyu Dabas</strong>.</p>
           <h2>1. Cancellation before work begins</h2>
           <p>You may cancel an order free of charge any time before a specialist is assigned to it. If you paid upfront, the full amount will be refunded.</p>
           <h2>2. Cancellation after work begins</h2>
@@ -136,7 +136,7 @@ function Body({ page, wa }) {
         <>
           <h1>Shipping &amp; Delivery Policy</h1>
           <div className="policy-updated">Last updated: 11 June 2026</div>
-          <p><strong>Deleqate, a sole proprietorship firm</strong>, provides <strong>digital services only</strong>. No physical goods are shipped.</p>
+          <p><strong>Deleqate Brand of Opuluxe, a sole proprietorship firm of Abhimanyu Dabas</strong>, provides <strong>digital services only</strong>. No physical goods are shipped.</p>
           <h2>1. Delivery method</h2>
           <p>All deliverables — images, videos, design files and audio — are delivered electronically to your secure account dashboard on www.deleqate.com. Your order status updates in real time, and final files become downloadable once payment is confirmed.</p>
           <h2>2. Delivery timeline</h2>
@@ -174,7 +174,7 @@ export default function Policy({ page, session }) {
     <div>
       <style>{css}</style>
       <nav className="navbar">
-        <Link to="/" className="navbar-brand"><video src="/img/logo.mp4" autoPlay loop muted playsInline /></Link>
+        <Link to="/" className="navbar-brand"><img src="/img/logo.png" alt="Delegate" /></Link>
         <button className={`nav-toggle ${navOpen ? 'open' : ''}`} aria-label="Open menu" aria-expanded={navOpen} onClick={() => setNavOpen(o => !o)}>
           <span></span><span></span><span></span>
         </button>
@@ -195,7 +195,7 @@ export default function Policy({ page, session }) {
         <div className="policy-card">
           <Body page={page} wa={wa} />
           <div className="policy-legal">
-            Operated by <strong>Deleqate, a sole proprietorship firm</strong> · <Mail /> · +{wa}
+            Operated by <strong>Deleqate Brand of Opuluxe, a sole proprietorship firm of Abhimanyu Dabas</strong> · <Mail /> · +{wa}
           </div>
           <nav className="policy-nav" aria-label="Policy pages">
             <Link to="/about">About Us</Link>

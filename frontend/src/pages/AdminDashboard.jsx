@@ -232,7 +232,12 @@ export default function AdminDashboard({ session }) {
   function flash(msg, ok = true) { setToast({ msg, ok }); setTimeout(() => setToast(null), 2500); }
   function elapsed(createdAt) {
     if (!createdAt) return '—';
-    const ms = now - new Date(createdAt).getTime();
+    // DB timestamps are UTC ("YYYY-MM-DD HH:MM:SS" with no zone). JS parses a
+    // space-separated string as LOCAL time, causing a timezone offset error —
+    // normalise to ISO UTC so the age is correct.
+    let iso = String(createdAt).includes('T') ? String(createdAt) : String(createdAt).replace(' ', 'T');
+    if (!/[zZ]|[+-]\d\d:?\d\d$/.test(iso)) iso += 'Z';
+    const ms = now - new Date(iso).getTime();
     if (isNaN(ms) || ms < 0) return '—';
     const totalSec = Math.floor(ms / 1000);
     const dd = Math.floor(totalSec / 86400);
@@ -317,7 +322,7 @@ export default function AdminDashboard({ session }) {
     <div>
       <style>{css}</style>
       <nav className="navbar">
-        <Link to="/" className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><video src="/img/logo.mp4" autoPlay loop muted playsInline /> <small style={{ color: '#8B9AAB' }}>Admin</small></Link>
+        <Link to="/" className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src="/img/logo.png" alt="Delegate" /> <small style={{ color: '#8B9AAB' }}>Admin</small></Link>
         <div className="navbar-nav">
           {adminName && <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#6b7280' }}>{adminName}</span>}
           <Link to="/logout" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--navy)', border: '2px solid var(--navy)', borderRadius: 20, padding: '0.35rem 1rem' }}>Logout</Link>
