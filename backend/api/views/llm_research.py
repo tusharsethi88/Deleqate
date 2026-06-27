@@ -968,7 +968,17 @@ def _llm_worker_thread():
                 print(f"[LLM Worker] Claimed Order #{order_id} for '{stock_name}'", flush=True)
 
                 try:
-                    html_content = _generate_report(stock_name, research_focus, report_type)
+                    # Cache the generated HTML so a PDF-render failure (e.g. a
+                    # transient Chromium issue) doesn't re-call the model on retry.
+                    cache_path = os.path.join(settings.DELIVERABLES_FOLDER, f"_gen_order_{order_id}.html")
+                    if os.path.exists(cache_path):
+                        with open(cache_path, 'r', encoding='utf-8') as f:
+                            html_content = f.read()
+                        print(f"[LLM Worker] Reusing cached HTML for order {order_id} (skipping model call)", flush=True)
+                    else:
+                        html_content = _generate_report(stock_name, research_focus, report_type)
+                        with open(cache_path, 'w', encoding='utf-8') as f:
+                            f.write(html_content)
 
                     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
                     safe_stock = secure_filename(stock_name.replace(' ', '_'))
@@ -977,10 +987,17 @@ def _llm_worker_thread():
 
                     from playwright.sync_api import sync_playwright
                     print(f"[LLM Worker] Rendering HTML to PDF...", flush=True)
+                    # Headless Chromium on a server needs these flags: the sandbox
+                    # fails under systemd, and small /dev/shm causes crashes
+                    # ("Target page/browser has been closed").
                     with sync_playwright() as p:
-                        browser = p.chromium.launch()
+                        browser = p.chromium.launch(args=[
+                            '--no-sandbox',
+                            '--disable-dev-shm-usage',
+                            '--disable-gpu',
+                        ])
                         page = browser.new_page()
-                        page.set_content(html_content)
+                        page.set_content(html_content, wait_until='load')
                         page.pdf(path=filepath, format="A4", print_background=True)
                         browser.close()
 
@@ -994,6 +1011,12 @@ def _llm_worker_thread():
                                  (datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), order_id))
 
                     log_status(conn, order_id, 'in_progress', 'delivered', None, "AI Pilot completed equity research report")
+                    # Delivered — drop the cached HTML.
+                    try:
+                        if os.path.exists(cache_path):
+                            os.remove(cache_path)
+                    except Exception:
+                        pass
                     print(f"[LLM Worker] Order #{order_id} successfully marked as delivered!", flush=True)
                 except Exception as e:
                     print(f"[LLM Worker] Error generating report for order {order_id}: {e}", flush=True)
