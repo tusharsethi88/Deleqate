@@ -62,12 +62,12 @@
     var dataEl = byId('ic-infographic-data-input');
     if (dataEl) dataEl.required = isInfo;
     var img = byId('ic-images-input');
-    if (img) img.required = (isImage || isPhoto);
+    if (img) img.required = isPhoto;
 
     var lbl = byId('ic-images-label'), hint = byId('ic-images-hint');
     if (lbl && hint) {
       if (isPhoto) { lbl.innerHTML = 'Your image set <span class="required">*</span>'; hint.textContent = 'These photos ARE the slides — add 5–10 strong, on-brand images.'; }
-      else if (isImage) { lbl.innerHTML = 'Product / Reference Photos <span class="required">*</span>'; hint.textContent = 'Required — the visuals behind your text. Add as many as you like.'; }
+      else if (isImage) { lbl.textContent = 'Product / Reference Photos (optional)'; hint.textContent = 'Optional — the visuals behind your text. Add as many as you like, or let the pilot source them.'; }
       else { lbl.textContent = 'Product / Reference Photos (optional)'; hint.textContent = 'Optional — anything visual that guides the pilot.'; }
     }
     var tl = byId('ic-topic-label');
