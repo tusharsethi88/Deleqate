@@ -177,6 +177,10 @@ pip install --quiet --upgrade pip
 pip install --quiet -r requirements.txt
 log "✓ Python dependencies up to date"
 
+# Playwright needs its browser binary (not just the pip package) for HTML→PDF.
+log "--- Ensuring Playwright Chromium is installed ---"
+python -m playwright install chromium >/dev/null 2>&1 && log "✓ Playwright Chromium ready" || log "⚠ Playwright Chromium install failed (run: python -m playwright install-deps chromium)"
+
 # ── Step 4: Run Django migrations (SAFE — only adds, never drops) ────────────
 log "--- Step 4: Running database migrations ---"
 python manage.py migrate --noinput

@@ -519,7 +519,6 @@ def _fetch_peers_context(soup, headers, session=None):
 
 
 def fetch_live_context(stock_name):
-    from duckduckgo_search import DDGS
     import time
     import requests
     from bs4 import BeautifulSoup
@@ -659,6 +658,16 @@ def fetch_live_context(stock_name):
         ]
         
         try:
+            try:
+                from duckduckgo_search import DDGS
+            except ImportError:
+                try:
+                    from ddgs import DDGS          # package was renamed to 'ddgs'
+                except ImportError:
+                    DDGS = None
+            if DDGS is None:
+                print("[LLM Worker] duckduckgo_search not installed — skipping web fallback", flush=True)
+                raise RuntimeError("no-ddgs")
             with DDGS() as ddgs:
                 for q in fallback_queries:
                     try:
@@ -906,30 +915,66 @@ def _llm_worker_thread():
         try:
             conn = sqlite3.connect(DB_PATH, timeout=10)
             conn.row_factory = sqlite3.Row
-            
-            # Find an in_progress equity research order that hasn't been completed yet
+
+            # Release STALE claims: if a generation crashed/hung, its order stays
+            # claimed + in_progress and would block the single-concurrency queue
+            # forever. A report takes 1-3 min, so anything claimed >15 min ago is
+            # presumed dead — release it so it retries and the queue moves on.
+            conn.execute(
+                "UPDATE orders SET assigned_pilot_id=NULL WHERE task='equity_research' "
+                "AND status='in_progress' AND assigned_pilot_id IS NOT NULL "
+                "AND assigned_at < datetime('now','-15 minutes')")
+            conn.commit()
+
+            # Find the OLDEST unclaimed in_progress equity research order (FIFO
+            # queue). assigned_pilot_id IS NULL means no worker has claimed it.
             order = conn.execute(
-                "SELECT id, intake_data, client_id FROM orders WHERE task='equity_research' AND status='in_progress' AND id NOT IN (SELECT order_id FROM deliverables) LIMIT 1"
+                "SELECT id, intake_data, client_id FROM orders WHERE task='equity_research' "
+                "AND status='in_progress' AND assigned_pilot_id IS NULL "
+                "AND id NOT IN (SELECT order_id FROM deliverables) ORDER BY id ASC LIMIT 1"
             ).fetchone()
-            
+
             if order:
                 order_id = order['id']
-                
+
+                # Resolve the AI pilot id (used for both the claim and the deliverable).
+                ap_email = os.environ.get('AUTOPILOT_EMAIL', 'deleqate@gmail.com')
+                pilot = conn.execute("SELECT id FROM users WHERE email=? AND role='pilot'", (ap_email,)).fetchone()
+                pilot_id = pilot['id'] if pilot else 1  # Fallback to 1 if no pilot found
+
+                # ATOMIC CLAIM with GLOBAL SINGLE-CONCURRENCY: claim this order
+                # only if (a) it's still unclaimed AND (b) no other equity-research
+                # order is currently generating (status='in_progress' AND already
+                # claimed). SQLite serializes writes, so only one worker — across
+                # all gunicorn processes — can ever be generating at a time; the
+                # rest stay queued (unclaimed, in_progress) for later loops.
+                claim = conn.execute(
+                    "UPDATE orders SET assigned_pilot_id=?, assigned_at=CURRENT_TIMESTAMP "
+                    "WHERE id=? AND status='in_progress' AND assigned_pilot_id IS NULL "
+                    "AND NOT EXISTS (SELECT 1 FROM orders WHERE task='equity_research' "
+                    "                AND status='in_progress' AND assigned_pilot_id IS NOT NULL)",
+                    (pilot_id, order_id))
+                conn.commit()
+                if claim.rowcount != 1:
+                    conn.close()
+                    time.sleep(5)
+                    continue  # another report is generating, or order already taken — wait
+
                 intake = json.loads(order['intake_data'] or "{}")
                 stock_name = intake.get("stock_name", "")
                 research_focus = intake.get("research_focus", "")
                 report_type = intake.get("report_type", "Single-Stock Deep-Dive")
-                
-                print(f"[LLM Worker] Picked up in_progress Order #{order_id} for '{stock_name}'", flush=True)
-                
+
+                print(f"[LLM Worker] Claimed Order #{order_id} for '{stock_name}'", flush=True)
+
                 try:
                     html_content = _generate_report(stock_name, research_focus, report_type)
-                    
+
                     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
                     safe_stock = secure_filename(stock_name.replace(' ', '_'))
                     filename = f"order_{order_id}_{safe_stock}_{timestamp}.pdf"
                     filepath = os.path.join(settings.DELIVERABLES_FOLDER, filename)
-                    
+
                     from playwright.sync_api import sync_playwright
                     print(f"[LLM Worker] Rendering HTML to PDF...", flush=True)
                     with sync_playwright() as p:
@@ -938,27 +983,23 @@ def _llm_worker_thread():
                         page.set_content(html_content)
                         page.pdf(path=filepath, format="A4", print_background=True)
                         browser.close()
-                        
-                    # Assign a pilot ID for the deliverable
-                    ap_email = os.environ.get('AUTOPILOT_EMAIL', 'deleqate@gmail.com')
-                    pilot = conn.execute("SELECT id FROM users WHERE email=? AND role='pilot'", (ap_email,)).fetchone()
-                    pilot_id = pilot['id'] if pilot else 1  # Fallback to 1 if no pilot found
-                    
+
                     conn.execute(
                         "INSERT INTO deliverables (order_id, pilot_id, filename, original_name) VALUES (?,?,?,?)",
                         (order_id, pilot_id, filename, f"{stock_name} Research Report.pdf")
                     )
-                    
+
                     # Update status to delivered
-                    conn.execute("UPDATE orders SET status='delivered', completed_at=?, assigned_pilot_id=?, assigned_at=CURRENT_TIMESTAMP WHERE id=?", 
-                                 (datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), pilot_id, order_id))
-                    
+                    conn.execute("UPDATE orders SET status='delivered', completed_at=? WHERE id=?",
+                                 (datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), order_id))
+
                     log_status(conn, order_id, 'in_progress', 'delivered', None, "AI Pilot completed equity research report")
                     print(f"[LLM Worker] Order #{order_id} successfully marked as delivered!", flush=True)
                 except Exception as e:
                     print(f"[LLM Worker] Error generating report for order {order_id}: {e}", flush=True)
-                    # Stay in 'in_progress' and it will be retried on next loop
-                    
+                    # Release the claim so it retries on a later loop.
+                    conn.execute("UPDATE orders SET assigned_pilot_id=NULL WHERE id=?", (order_id,))
+
                 conn.commit()
             conn.close()
         except Exception as e:
