@@ -130,6 +130,7 @@ urlpatterns = [
     path('.well-known/security.txt', public.security_txt),
     re_path(r'^api/hero-img/(?P<which>\w+)/(?P<filename>.+)$', public.hero_img),
     path('api/pricing', public.api_pricing),
+    path('api/companies', public.api_companies),
 
     # ── auth ──
     path('login', auth.login),

@@ -62,11 +62,11 @@
     var dataEl = byId('ic-infographic-data-input');
     if (dataEl) dataEl.required = isInfo;
     var img = byId('ic-images-input');
-    if (img) img.required = isPhoto;
+    if (img) img.required = false;
 
     var lbl = byId('ic-images-label'), hint = byId('ic-images-hint');
     if (lbl && hint) {
-      if (isPhoto) { lbl.innerHTML = 'Your image set <span class="required">*</span>'; hint.textContent = 'These photos ARE the slides — add 5–10 strong, on-brand images.'; }
+      if (isPhoto) { lbl.textContent = 'Your image set (optional)'; hint.textContent = 'These photos ARE the slides — add 5–10 strong, on-brand images, or let the pilot source them.'; }
       else if (isImage) { lbl.textContent = 'Product / Reference Photos (optional)'; hint.textContent = 'Optional — the visuals behind your text. Add as many as you like, or let the pilot source them.'; }
       else { lbl.textContent = 'Product / Reference Photos (optional)'; hint.textContent = 'Optional — anything visual that guides the pilot.'; }
     }
@@ -191,11 +191,11 @@
     row.className = 'vs-photo-row';
     row.style.cssText = 'display:grid;grid-template-columns:160px 1fr 1fr 1fr auto;gap:0.5rem;margin-bottom:0.6rem;align-items:start;';
     row.innerHTML = `
-      <select name="room_labels[]" class="form-control" style="margin-top:0;">${vsRoomOptions.map(o=>`<option>${o}</option>`).join('')}</select>
+      <select name="room_labels[]" class="form-control" style="margin-top:0;" required>${vsRoomOptions.map(o=>`<option>${o}</option>`).join('')}</select>
       <div class="upload-box" style="margin:0;" id="box-vs-p${idx}a">
         <input type="file" name="room_photos[]" accept="image/*" onchange="showFile(this,'box-vs-p${idx}a')" required>
         <div class="upload-icon" style="font-size:0.9rem;margin:0;">📷</div>
-        <div class="upload-label" style="font-size:0.75rem;">Upload</div>
+        <div class="upload-label" style="font-size:0.75rem;">Upload <span class="required" style="color:#ef4444;">*</span></div>
         <div class="file-shown" style="font-size:0.68rem;"></div>
       </div>
       <div class="upload-box" style="margin:0;border-style:dashed;border-color:#f59e0b;background:#fffbeb;" id="box-vs-p${idx}b">
@@ -271,15 +271,15 @@
     row.innerHTML = `
       <select name="property_photos_label[]" class="form-control" style="margin-top:0;">${areaOptions.map(o=>`<option>${o}</option>`).join('')}</select>
       <div class="upload-box" style="margin:0;" id="box-pr-p${idx}a">
-        <input type="file" name="property_photos" accept="image/*" onchange="showFile(this,'box-pr-p${idx}a')">
+        <input type="file" name="property_photos" accept="image/*" onchange="showFile(this,'box-pr-p${idx}a')" required>
         <div class="upload-icon" style="font-size:0.9rem;margin:0;">📷</div>
-        <div class="upload-label" style="font-size:0.75rem;">Upload</div>
+        <div class="upload-label" style="font-size:0.75rem;">Upload <span class="required" style="color:#ef4444;">*</span></div>
         <div class="file-shown" style="font-size:0.68rem;"></div>
       </div>
       <div class="upload-box" style="margin:0;border-style:dashed;border-color:#f59e0b;background:#fffbeb;" id="box-pr-p${idx}b">
-        <input type="file" name="property_photos_b" accept="image/*" onchange="showFile(this,'box-pr-p${idx}b')">
+        <input type="file" name="property_photos_b" accept="image/*" onchange="showFile(this,'box-pr-p${idx}b')" required>
         <div class="upload-icon" style="font-size:0.9rem;margin:0;">📐</div>
-        <div class="upload-label" style="font-size:0.75rem;color:#92400e;">Upload (optional)</div>
+        <div class="upload-label" style="font-size:0.75rem;color:#92400e;">Upload <span class="required" style="color:#ef4444;">*</span></div>
         <div class="file-shown" style="font-size:0.68rem;"></div>
       </div>
       <div class="upload-box" style="margin:0;border-style:dashed;border-color:#6366f1;background:#f5f3ff;" id="box-pr-mood${idx}">
@@ -492,6 +492,19 @@
     const task = document.getElementById('taskTypeInput').value;
     if (!task) { showToast('Please select a task first.', 'error'); return; }
 
+    // Equity research: stock name MUST be a company from the list (no free text).
+    if (task === 'equity_research') {
+      var snEl = document.getElementById('stock_name_input');
+      var snVal = snEl ? snEl.value.trim() : '';
+      if (!snVal) { showToast('Please select a company from the list.', 'error'); if (snEl) snEl.focus(); return; }
+      if (window.__companiesReady && window.__companiesReady() &&
+          window.__isValidCompany && !window.__isValidCompany(snVal)) {
+        showToast('Please select a company from the list — custom names are not allowed.', 'error');
+        if (snEl) { snEl.value = ''; snEl.focus(); }
+        return;
+      }
+    }
+
     // 1A: validate bg_cleanup requires at least one product photo
     if (task === 'bg_cleanup') {
       const photoInput = document.getElementById('bg-photos-input');
@@ -698,3 +711,90 @@
   var _origSelectSku = selectSku;
   selectSku = function(sku, el) { _origSelectSku(sku, el); if (sku === 'bg_cleanup') applyBgLock(); if (sku === 'instagram_carousel') { var _f = document.querySelector('input[name=carousel_format]:checked'); if (typeof updateCarouselFormat === 'function') updateCarouselFormat(_f ? _f.value : 'Image + Text'); } };
   applyBgLock();
+
+  // Custom searchable dropdown for the equity-research "Stock Name / Topic"
+  // field — opens directly below the input and filters instantly. Data from
+  // /api/companies (new_companies.csv).
+  (function initCompanyAutocomplete() {
+    var input = document.getElementById('stock_name_input');
+    var box = document.getElementById('company_suggest');
+    if (!input || !box) return;
+    var base = window.__API_BASE__ || '';
+    var companies = [];
+    var active = -1, items = [];
+
+    fetch(base + '/api/companies', { credentials: 'include' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { companies = (d && d.companies) || []; })
+      .catch(function () {});
+
+    function hide() { box.style.display = 'none'; box.innerHTML = ''; active = -1; items = []; }
+
+    function render(q) {
+      q = (q || '').trim().toLowerCase();
+      if (!q) { hide(); return; }
+      var out = [];
+      for (var i = 0; i < companies.length && out.length < 40; i++) {
+        var c = companies[i];
+        if (c.name.toLowerCase().indexOf(q) !== -1 ||
+            (c.ticker && c.ticker.toLowerCase().indexOf(q) !== -1)) {
+          out.push(c);
+        }
+      }
+      items = out; active = -1;
+      if (!out.length) { box.innerHTML = '<div class="cs-empty">No matching company</div>'; box.style.display = 'block'; return; }
+      box.innerHTML = out.map(function (c, idx) {
+        var t = c.ticker ? '<span class="cs-tkr">' + c.ticker + '</span>' : '';
+        return '<div class="cs-item" data-i="' + idx + '"><span class="cs-name">' + c.name + '</span>' + t + '</div>';
+      }).join('');
+      box.style.display = 'block';
+    }
+
+    function pick(idx) {
+      if (idx < 0 || idx >= items.length) return;
+      input.value = items[idx].name;
+      hide();
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function isValid(v) {
+      v = (v || '').trim().toLowerCase();
+      return companies.some(function (c) { return c.name.toLowerCase() === v; });
+    }
+    // Expose for submit-time enforcement (strict: only list companies allowed).
+    window.__isValidCompany = isValid;
+    window.__companiesReady = function () { return companies.length > 0; };
+
+    input.addEventListener('input', function () { render(input.value); });
+    input.addEventListener('focus', function () { if (input.value.trim()) render(input.value); });
+    // Strict: only a company from the list is allowed. If the typed value isn't
+    // an exact list match, clear it on blur (skip if the list failed to load).
+    input.addEventListener('blur', function () {
+      setTimeout(function () {
+        if (companies.length && input.value.trim() && !isValid(input.value)) {
+          input.value = '';
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        hide();
+      }, 150);
+    });
+    input.addEventListener('keydown', function (e) {
+      if (box.style.display !== 'block' || !items.length) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); active = Math.min(active + 1, items.length - 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); active = Math.max(active - 1, 0); }
+      else if (e.key === 'Enter') { if (active >= 0) { e.preventDefault(); pick(active); } return; }
+      else if (e.key === 'Escape') { hide(); return; }
+      else return;
+      Array.prototype.forEach.call(box.children, function (el, i) {
+        el.classList.toggle('active', i === active);
+        if (i === active && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+      });
+    });
+    box.addEventListener('mousedown', function (e) {
+      var it = e.target.closest('.cs-item');
+      if (it) { e.preventDefault(); pick(parseInt(it.getAttribute('data-i'), 10)); }
+    });
+    document.addEventListener('click', function (e) {
+      if (e.target !== input && !box.contains(e.target)) hide();
+    });
+  })();

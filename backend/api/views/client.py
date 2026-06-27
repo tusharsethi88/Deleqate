@@ -90,9 +90,11 @@ def uploaded_file(request, filename):
         return safe_serve_file(settings.UPLOAD_FOLDER, filename)
     return err('Forbidden', status=403)
 
+from django.views.decorators.clickjacking import xframe_options_exempt
 
 # ── /api/preview-img/<filename> (app.py 3304-3324) ─────────
 @login_required
+@xframe_options_exempt
 def preview_img_file(request, filename):
     current_user = request.user
     if current_user.role in ('admin', 'pilot'):
@@ -109,6 +111,10 @@ def preview_img_file(request, filename):
         return err('Forbidden', status=403)
     if row['status'] not in ('delivered', 'approved'):
         return err('Not available', status=403)
+
+    # Payment is taken before delivery (with refund if the client rejects even
+    # after edits), so there's no need to paywall the preview — serve the full
+    # report at both 'delivered' and 'approved' stages, consistent with other SKUs.
     resp = safe_serve_file(settings.DELIVERABLES_FOLDER, filename)
     resp['Content-Disposition'] = 'inline'
     resp['Cache-Control'] = 'no-store, no-cache'

@@ -187,6 +187,7 @@ PRICE_ANNOUNCEMENT_PACK = 49900   # ₹499/3-piece pack
 PRICE_BRAND_STARTER_KIT = 199900  # ₹1999/kit
 PRICE_MENU_DESIGN       = 79900   # ₹799/menu
 PRICE_PODCAST_REEL      = 64900   # ₹649/reel
+PRICE_EQUITY_RESEARCH   = 49900   # ₹499/report
 # Legacy (kept for backward compat)
 PRICE_PER_RENDER        = 24900
 PRICE_PER_STAGING       = 39900
@@ -210,6 +211,8 @@ TASK_LABELS = {
     'brand_starter_kit':   'Brand Starter Kit',
     'menu_design':         'Restaurant / Business Menu Design',
     'podcast_reel':        'Podcast Highlight Reel',
+    # Cluster 5 — Research
+    'equity_research':     'Equity Research Report',
     # Legacy
     'moodboard':              'Interior Rendering (Deferred)',
     'staging':                'Virtual Staging (Legacy)',
@@ -223,6 +226,7 @@ TASK_CLUSTERS = {
     'E-commerce':           ['bg_cleanup','product_listing','product_mockup'],
     'SMB Visual Content':   ['instagram_carousel','brand_demo_video','announcement_pack'],
     'Personal & Brand':     ['brand_starter_kit','menu_design','podcast_reel'],
+    'Research':             ['equity_research'],
 }
 # ══════════════════════════════════════════════════════════
 # PROPERTY REEL v3 — BHK-AWARE SELECTION + PROMPT ENGINE

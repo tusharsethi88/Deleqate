@@ -189,6 +189,36 @@ def hero_img(request, which, filename):
     return resp
 
 
+_COMPANIES_CACHE = None
+
+
+def api_companies(request):
+    """Return the equity-research company list (name + ticker) from
+    new_companies.csv for the Stock Name searchable dropdown."""
+    global _COMPANIES_CACHE
+    if _COMPANIES_CACHE is None:
+        import csv
+        path = os.path.join(str(settings.PROJECT_ROOT), 'new_companies.csv')
+        rows = []
+        try:
+            with open(path, newline='', encoding='utf-8') as f:
+                for r in csv.DictReader(f):
+                    name = (r.get('name') or '').strip()
+                    ticker = (r.get('ticker') or '').strip()
+                    if name:
+                        rows.append({'name': name, 'ticker': ticker})
+            # de-duplicate by name, keep sorted for a tidy dropdown
+            seen, uniq = set(), []
+            for r in sorted(rows, key=lambda x: x['name'].lower()):
+                if r['name'].lower() not in seen:
+                    seen.add(r['name'].lower())
+                    uniq.append(r)
+            _COMPANIES_CACHE = uniq
+        except Exception:
+            _COMPANIES_CACHE = []
+    return ok({'companies': _COMPANIES_CACHE})
+
+
 # ── /api/pricing (app.py 1980-1993) ────────────────────────
 @require_POST
 @rate_limit(limit=60, window=60, json_response=True)  # M-5: public endpoint

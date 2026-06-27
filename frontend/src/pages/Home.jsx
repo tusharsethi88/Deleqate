@@ -46,6 +46,9 @@ const CLUSTERS = [
     { key: 'menu_design', sla: '4h', icon: 'clipboard-list', title: 'Menu Design', desc: 'Print-ready, typographically rich menus for restaurants and cafes. HTML/PDF output.', price: '₹799', note: 'per menu design', features: ['Print-ready PDF export', 'HTML interactive layout', 'Fully custom colors/fonts', 'Clean categorised grid'] },
     { key: 'podcast_reel', sla: '3h', icon: 'mic', title: 'Podcast Highlight Reel', desc: 'Viral short clips from your long-form podcast — karaoke captions, B-roll, optimised hook.', price: '₹649', note: 'per highlight reel', features: ['Karaoke-style captions', 'Tight edit, filler cuts', 'Topic hooks & B-rolls', 'Cleaned up studio sound'] },
   ]],
+  ['Research', [
+    { key: 'equity_research', sla: '1h', icon: 'bar-chart-2', title: 'Equity Research Report', desc: 'Comprehensive financial report based on the proven 6-pillar framework. Interactive charts and verdict.', price: '₹499', note: 'full research report', features: ['6-pillar analysis framework', 'NVIDIA Nemotron LLM powered', 'Automated data gathering', 'Interactive HTML & PDF output'] },
+  ]],
 ];
 
 const FAQS = [

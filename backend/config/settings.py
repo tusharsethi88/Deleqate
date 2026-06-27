@@ -80,3 +80,4 @@ STATICFILES_DIRS = [PROJECT_ROOT / 'static']
 USE_TZ = False
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 APPEND_SLASH = False
+X_FRAME_OPTIONS = 'SAMEORIGIN'

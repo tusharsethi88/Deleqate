@@ -13,7 +13,7 @@ from .business import (
     PRICE_VIRTUAL_STAGING, PRICE_PROPERTY_REEL_HOOK, PRICE_PROPERTY_SOCIAL_CARD,
     PRICE_BG_CLEANUP, PRICE_PRODUCT_LISTING, PRICE_PRODUCT_MOCKUP,
     PRICE_INSTAGRAM_CAROUSEL, PRICE_BRAND_DEMO_VIDEO, PRICE_ANNOUNCEMENT_PACK,
-    PRICE_BRAND_STARTER_KIT, PRICE_MENU_DESIGN, PRICE_PODCAST_REEL,
+    PRICE_BRAND_STARTER_KIT, PRICE_MENU_DESIGN, PRICE_PODCAST_REEL, PRICE_EQUITY_RESEARCH,
     PRICE_PER_RENDER, PRICE_PER_STAGING, PRICE_PER_PRODUCT, PRICE_AUDIO_FIXED,
 )
 
@@ -61,6 +61,7 @@ PRICING_MAP = {
     'brand_starter_kit':  (PRICE_BRAND_STARTER_KIT,'fixed',    'brand kit'),
     'menu_design':        (PRICE_MENU_DESIGN,       'fixed',   'menu'),
     'podcast_reel':       (PRICE_PODCAST_REEL,      'fixed',   'highlight reel'),
+    'equity_research':    (PRICE_EQUITY_RESEARCH,   'fixed',   'equity research report'),
     # Legacy
     'moodboard':          (PRICE_PER_RENDER,        'render',  'renders'),
     'staging':            (PRICE_PER_STAGING,       'photo',   'photos'),
@@ -454,6 +455,7 @@ def init_db():
             ('brand_starter_kit',  'Brand Starter Kit',           'Personal & Brand',  PRICE_BRAND_STARTER_KIT,    'fixed',   'brand kit',               1, 10),
             ('menu_design',        'Menu Design',                 'Personal & Brand',  PRICE_MENU_DESIGN,          'fixed',   'menu',                    1, 11),
             ('podcast_reel',       'Podcast Highlight Reel',      'Personal & Brand',  PRICE_PODCAST_REEL,         'fixed',   'highlight reel',          1, 12),
+            ('equity_research',    'Equity Research Report',      'Research',          PRICE_EQUITY_RESEARCH,      'fixed',   'equity research report',  1, 13),
         ]
         conn.executemany(
             'INSERT INTO skus (task_key, label, cluster, price_paisa, price_type, price_label, is_active, sort_order) VALUES (?,?,?,?,?,?,?,?)',
@@ -563,6 +565,12 @@ def start_background_workers():
     if _ap_thread is None or not _ap_thread.is_alive():
         _ap_thread = threading.Thread(target=_autopilot_auto_assign_worker, daemon=True, name='autopilot-autoassign')
         _ap_thread.start()
+        
+    try:
+        from api.views.llm_research import start_llm_worker
+        start_llm_worker()
+    except Exception as e:
+        print(f"Error starting LLM worker: {e}")
 
 # ═══════════════════════════════════════════════════════════
 # CUSTOMER EMAIL NOTIFICATIONS  (order placed + every status change)

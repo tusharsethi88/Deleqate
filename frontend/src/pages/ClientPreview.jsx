@@ -10,36 +10,48 @@ const ext = (fn) => (fn && fn.includes('.') ? fn.split('.').pop().toLowerCase() 
 const isImg = (fn) => IMG.includes(ext(fn));
 
 const css = `
-.cp-top{display:flex;align-items:center;gap:1rem;background:#0F1E33;padding:0.85rem 1.5rem;}
-.cp-top .brand{display:block;}
-.cp-top .brand img, .cp-top .brand video{height:72px;width:auto;display:block;mix-blend-mode:multiply;}
-.cp-top-order{color:rgba(255,255,255,0.7);font-size:0.85rem;}
-.back-link{margin-left:auto;color:#cfe0f5;font-size:0.85rem;text-decoration:none;}
-.cp-wrap{max-width:880px;margin:0 auto;padding:2rem 1.5rem 4rem;}
-.cp-wrap h1{font-size:1.5rem;color:#1A3A5C;margin-bottom:1.25rem;}
-.cp-deliv{background:#0F1E33;border-radius:14px;overflow:hidden;margin-bottom:1.5rem;}
-.cp-deliv-hd{display:flex;align-items:center;gap:0.6rem;padding:0.7rem 1rem;}
-.cp-deliv-hd .lbl{background:#C9A84C;color:#fff;border-radius:5px;padding:3px 10px;font-size:0.72rem;font-weight:800;text-transform:uppercase;}
-.cp-deliv-hd .meta{font-size:0.76rem;color:rgba(255,255,255,0.55);}
-.cp-cmp{position:relative;line-height:0;overflow:hidden;cursor:col-resize;user-select:none;}
-.cp-cmp img{width:100%;display:block;pointer-events:none;}
-.cp-cmp .after{position:absolute;inset:0;clip-path:inset(0 0 0 var(--split,50%));}
-.cp-handle{position:absolute;top:0;bottom:0;width:2px;background:#fff;left:var(--split,50%);}
-.cp-handle::after{content:'⇆';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;color:#1A3A5C;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-weight:900;box-shadow:0 2px 10px rgba(0,0,0,0.4);}
-.action-wrap{margin-bottom:1.5rem;}
-.action-card{border:1.5px solid #DDE3EC;border-radius:14px;padding:1.5rem;background:#fff;}
-.tabs{display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;}
-.tab-btn{font-size:0.82rem;font-weight:700;border:1.5px solid #DDE3EC;background:#fff;color:#8B9AAB;padding:8px 16px;border-radius:24px;cursor:pointer;}
-.tab-btn.active{border-color:#1A3A5C;color:#1A3A5C;background:#EEF3FA;}
-.tab-btn.danger.active{border-color:#DC2626;color:#DC2626;background:#FEF2F2;}
-.btn-action-primary{background:#1B6B3A;color:#fff;border:none;border-radius:10px;padding:12px 26px;font-size:0.95rem;font-weight:700;cursor:pointer;width:100%;}
-.btn-action-primary.btn-gold{background:#C9A84C;}
-.btn-action-danger{background:#DC2626;color:#fff;border:none;border-radius:10px;padding:12px 26px;font-size:0.95rem;font-weight:700;cursor:pointer;width:100%;}
-.edit-textarea{width:100%;border:1.5px solid #DDE3EC;border-radius:8px;padding:8px 10px;font-size:0.85rem;font-family:inherit;margin:6px 0;}
-.edit-row{border:1px solid #EEF1F6;border-radius:10px;padding:0.75rem;margin-bottom:0.6rem;}
-.btn-download-file{display:inline-block;background:#1B6B3A;color:#fff;font-weight:700;
-  text-decoration:none;border-radius:9px;padding:9px 20px;font-size:0.9rem;}
-.btn-download-file:hover{background:#155b30;color:#fff;}
+.cp-top { display: flex; align-items: center; gap: 1rem; background: var(--surface-white, #fff); padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-soft, #E6ECF1); }
+.cp-top .brand { display: block; }
+.cp-top .brand img, .cp-top .brand video { height: 40px; width: auto; display: block; } /* Removed mix-blend-mode: multiply so the logo works normally */
+.cp-top-order { color: var(--text-secondary, #5C7386); font-size: 0.9rem; font-weight: 600; margin-left: 1rem; }
+.back-link { margin-left: auto; color: var(--text-secondary, #5C7386); font-size: 0.85rem; font-weight: 600; text-decoration: none; transition: color 0.2s; }
+.back-link:hover { color: var(--gold-dark, #1E2A39); }
+
+.cp-wrap { max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+.cp-wrap h1 { font-family: var(--font-display, 'Syne', sans-serif); font-size: 2rem; color: var(--text-primary, #0B0F14); margin-bottom: 1.5rem; letter-spacing: -0.02em; }
+
+.cp-deliv { background: var(--surface-white, #fff); border: 1px solid var(--border, #D6DEE6); border-radius: var(--radius-xl, 12px); overflow: hidden; margin-bottom: 2rem; box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05)); }
+.cp-deliv-hd { display: flex; align-items: center; gap: 0.8rem; padding: 1rem 1.25rem; background: var(--surface-low, #E8EEF2); border-bottom: 1px solid var(--border, #D6DEE6); }
+.cp-deliv-hd .lbl { background: var(--gold-dark, #1E2A39); color: #fff; border-radius: var(--radius, 4px); padding: 4px 12px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.cp-deliv-hd .meta { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary, #5C7386); }
+
+.cp-cmp { position: relative; line-height: 0; overflow: hidden; cursor: col-resize; user-select: none; }
+.cp-cmp img { width: 100%; display: block; pointer-events: none; }
+.cp-cmp .after { position: absolute; inset: 0; clip-path: inset(0 0 0 var(--split, 50%)); }
+.cp-handle { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--gold, #D4AF37); left: var(--split, 50%); z-index: 10; }
+.cp-handle::after { content: '⇆'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--gold, #D4AF37); color: #fff; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-weight: 900; box-shadow: var(--shadow, 0 4px 12px rgba(0,0,0,0.15)); border: 2px solid #fff; }
+
+.action-wrap { margin-bottom: 2rem; }
+.action-card { border: 1px solid var(--border, #D6DEE6); border-radius: var(--radius-xl, 12px); padding: 2rem; background: var(--surface-white, #fff); box-shadow: var(--shadow, 0 4px 12px rgba(0,0,0,0.05)); }
+.tabs { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.tab-btn { font-family: var(--font-sans, 'Inter', sans-serif); font-size: 0.9rem; font-weight: 600; border: 1px solid var(--border, #D6DEE6); background: var(--surface-white, #fff); color: var(--text-secondary, #5C7386); padding: 10px 20px; border-radius: var(--radius-pill, 99px); cursor: pointer; transition: all 0.2s ease; }
+.tab-btn:hover { border-color: var(--text-muted, #7E93A3); color: var(--text-primary, #0B0F14); }
+.tab-btn.active { border-color: var(--gold-dark, #1E2A39); color: #fff; background: var(--gold-dark, #1E2A39); }
+.tab-btn.danger.active { border-color: var(--danger, #ba1a1a); color: #fff; background: var(--danger, #ba1a1a); }
+
+.btn-action-primary { font-family: var(--font-sans, 'Inter', sans-serif); background: var(--gold-dark, #1E2A39); color: #fff; border: none; border-radius: var(--radius-lg, 8px); padding: 14px 28px; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%; transition: background 0.2s; }
+.btn-action-primary:hover { background: var(--gold-bright, #2C3E54); }
+.btn-action-primary.btn-gold { background: var(--gold, #D4AF37); color: #000; }
+.btn-action-primary.btn-gold:hover { background: #c39d2c; }
+.btn-action-danger { background: var(--danger, #ba1a1a); color: #fff; border: none; border-radius: var(--radius-lg, 8px); padding: 14px 28px; font-size: 1rem; font-weight: 600; cursor: pointer; width: 100%; transition: opacity 0.2s; }
+.btn-action-danger:hover { opacity: 0.9; }
+
+.edit-textarea { width: 100%; border: 1px solid var(--border, #D6DEE6); border-radius: var(--radius-lg, 8px); padding: 12px 14px; font-size: 0.95rem; font-family: inherit; margin: 8px 0; outline: none; transition: border-color 0.2s; }
+.edit-textarea:focus { border-color: var(--gold-dark, #1E2A39); }
+.edit-row { border: 1px solid var(--border-soft, #E6ECF1); border-radius: var(--radius-lg, 8px); padding: 1rem; margin-bottom: 1rem; background: var(--surface, #F5F8FA); }
+
+.btn-download-file { display: inline-flex; align-items: center; justify-content: center; background: var(--gold-dark, #1E2A39); color: #fff; font-weight: 600; text-decoration: none; border-radius: var(--radius-lg, 8px); padding: 12px 24px; font-size: 0.95rem; transition: background 0.2s; }
+.btn-download-file:hover { background: var(--gold-bright, #2C3E54); color: #fff; }
 `;
 
 function Slider({ before, after }) {
@@ -60,6 +72,29 @@ function Slider({ before, after }) {
       <div className="cp-handle" />
     </div>
   );
+}
+
+// Loads a deliverable through the authenticated fetch path (same one used for
+// JSON, so CORS/cookies already work) and renders it as a same-origin blob.
+// Direct cross-origin <iframe src> loads of the backend PDF were failing with
+// ERR_CONNECTION_REFUSED in some browsers; blob URLs avoid that entirely.
+function MediaFrame({ url, kind }) {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [err, setErr] = useState(null);
+  useEffect(() => {
+    let active = true; let made = null;
+    setBlobUrl(null); setErr(null);
+    fetch(url, { credentials: 'include' })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.blob(); })
+      .then(b => { if (!active) return; made = URL.createObjectURL(b); setBlobUrl(made); })
+      .catch(e => active && setErr(e.message || 'Failed to load'));
+    return () => { active = false; if (made) URL.revokeObjectURL(made); };
+  }, [url]);
+  if (err) return <div style={{ padding: '2rem', textAlign: 'center', color: '#5C7386' }}>Preview unavailable ({err}).</div>;
+  if (!blobUrl) return <div style={{ padding: '2rem', textAlign: 'center', color: '#5C7386' }}>Loading preview…</div>;
+  return <iframe src={blobUrl} title={kind === 'pdf' ? 'PDF Preview' : 'HTML Preview'}
+    style={{ width: '100%', height: '800px', border: 'none', background: '#fff' }}
+    {...(kind === 'html' ? { sandbox: 'allow-same-origin allow-scripts' } : {})} />;
 }
 
 export default function ClientPreview() {
@@ -172,6 +207,8 @@ export default function ClientPreview() {
                 ? <Slider before={fileUrl(`/uploads/${before.filename}`)} after={afterUrl} />
                 : isImg(dv.filename)
                   ? <img src={afterUrl} alt="Deliverable" style={{ width: '100%', display: 'block' }} />
+                  : (dv.filename.endsWith('.html') || dv.filename.endsWith('.htm') || dv.filename.endsWith('.pdf'))
+                    ? <MediaFrame url={afterUrl} kind={dv.filename.endsWith('.pdf') ? 'pdf' : 'html'} />
                   : <div style={{ padding: '1.5rem', textAlign: 'center' }}>
                       <a href={fileUrl(`/deliverables/${dv.filename}?download=1`)} download
                          style={{ color: '#C9A84C', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

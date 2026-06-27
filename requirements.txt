@@ -10,3 +10,4 @@ pillow>=10.0           # hero image resize + upload content checks
 pillow-heif>=0.13      # decode iPhone HEIC/HEIF uploads → converted to JPEG on save
 gunicorn>=21.2         # production WSGI server
 jinja2>=3.0            # render legacy pilot workflow template server-side
+pypdf>=4.0             # PDF preview paywall (first 2 pages) + concall PDF text extraction

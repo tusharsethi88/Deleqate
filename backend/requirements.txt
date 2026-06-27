@@ -7,3 +7,7 @@ pillow>=10.0           # hero image resize + upload content checks
 pillow-heif>=0.13      # decode iPhone HEIC/HEIF uploads → converted to JPEG on save
 gunicorn>=21.2         # production WSGI server
 jinja2>=3.0            # render legacy pilot workflow template server-side
+openai>=1.0.0          # NVIDIA Nemotron LLM integration
+playwright>=1.40.0     # HTML to PDF conversion
+PyPDF2>=3.0.0          # PDF slicing for preview (legacy; pypdf preferred)
+pypdf>=4.0             # PDF slicing for preview + concall PDF text extraction

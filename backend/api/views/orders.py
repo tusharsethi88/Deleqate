@@ -20,10 +20,39 @@ from core.business import (
     PRICE_PROPERTY_REEL_HOOK, PRICE_PROPERTY_REEL_STANDARD, PRICE_PROPERTY_REEL_SHOWCASE,
     PRICE_PROPERTY_SOCIAL_CARD, PRICE_BG_CLEANUP, PRICE_PRODUCT_LISTING, PRICE_PRODUCT_MOCKUP,
     PRICE_INSTAGRAM_CAROUSEL, PRICE_BRAND_DEMO_VIDEO, PRICE_ANNOUNCEMENT_PACK,
-    PRICE_BRAND_STARTER_KIT, PRICE_MENU_DESIGN, PRICE_PODCAST_REEL,
+    PRICE_BRAND_STARTER_KIT, PRICE_MENU_DESIGN, PRICE_PODCAST_REEL, PRICE_EQUITY_RESEARCH,
     PRICE_PER_RENDER, PRICE_PER_STAGING, PRICE_PER_PRODUCT, PRICE_AUDIO_FIXED,
 )
 from api.helpers import ok, err
+
+
+_LISTED_COMPANIES = None
+
+
+def _is_listed_company(name):
+    """True if `name` exactly matches a company name or ticker in
+    new_companies.csv (case-insensitive). Enforces list-only equity-research
+    selection server-side. Fails open only if the CSV can't be read."""
+    global _LISTED_COMPANIES
+    if _LISTED_COMPANIES is None:
+        import csv
+        names = set()
+        try:
+            path = os.path.join(str(settings.PROJECT_ROOT), 'new_companies.csv')
+            with open(path, newline='', encoding='utf-8') as f:
+                for r in csv.DictReader(f):
+                    n = (r.get('name') or '').strip().lower()
+                    t = (r.get('ticker') or '').strip().lower()
+                    if n:
+                        names.add(n)
+                    if t and t != 'id':
+                        names.add(t)
+        except Exception:
+            names = set()
+        _LISTED_COMPANIES = names
+    if not _LISTED_COMPANIES:
+        return True   # CSV unreadable → don't block orders
+    return (name or '').strip().lower() in _LISTED_COMPANIES
 
 
 def _save_django_file(f, path):
@@ -331,6 +360,16 @@ def submit_order(request):
                 'caption_style':      F.get('caption_style', 'full'),
             }
             price_unit = PRICE_PODCAST_REEL
+        elif task == 'equity_research':
+            sname = F.get('stock_name', '').strip()
+            if not _is_listed_company(sname):
+                return err('Please select a company from the list. Custom company names are not allowed.')
+            intake_data = {
+                'stock_name': sname,
+                'research_focus': F.get('research_focus', '').strip(),
+                'report_type': F.get('report_type', 'Single-Stock Deep-Dive').strip(),
+            }
+            price_unit = PRICE_EQUITY_RESEARCH
         # ── Legacy SKUs ──
         elif task == 'moodboard':
             intake_data = {
@@ -371,13 +410,15 @@ def submit_order(request):
             'SELECT COUNT(*) FROM orders WHERE client_id=?', (client_id,)).fetchone()[0]
         is_first_order = existing_order_count == 0
 
+        initial_status = 'in_progress' if task == 'equity_research' else 'pending'
+
         cur.execute('''INSERT INTO orders
             (client_id,name,phone,email,task,intake_data,render_count,price_per_unit,total_price,status)
-            VALUES (?,?,?,?,?,?,?,?,?,'pending')''',
+            VALUES (?,?,?,?,?,?,?,?,?,?)''',
             (client_id, name, phone, email, task, json.dumps(intake_data),
-             render_count, price_unit, total_price))
+             render_count, price_unit, total_price, initial_status))
         order_id = cur.lastrowid
-        log_status(conn, order_id, None, 'pending', client_id, 'Order submitted via wizard')
+        log_status(conn, order_id, None, initial_status, client_id, 'Order submitted via wizard')
 
         folder = os.path.join(settings.UPLOAD_FOLDER, f'order_{order_id}_{ts}')
         os.makedirs(folder, exist_ok=True)
@@ -524,6 +565,7 @@ def submit_order(request):
             'podcast_reel':       [('audio_file', 'audio', False),
                                    ('logo_file', 'logo', True),
                                    ('voice_note', 'voice_note', False)],
+            'equity_research':    [('voice_note', 'voice_note', False)],
             'moodboard':          [('floorplan_file', 'floor_plan', False),
                                    ('moodboard_file', 'moodboard', True)],
             'staging':            [('room_photos', 'room_photo', True)],
@@ -562,6 +604,7 @@ def submit_order(request):
             'brand_starter_kit':    None,   # logo optional (many buyers have no logo yet)
             'menu_design':          None,   # existing-menu optional
             'property_listing':     None,
+            'equity_research':      None,
             # Legacy SKUs (no strict requirement)
             'moodboard':            None,
             'staging':              None,
@@ -581,6 +624,17 @@ def submit_order(request):
                 import shutil
                 shutil.rmtree(folder, ignore_errors=True)
                 return err(_msg, success=False)
+
+        # Property reel: POV B (second angle) is mandatory for every area.
+        if task == 'property_reel':
+            n_a = cur.execute("SELECT COUNT(*) FROM order_attachments WHERE order_id=? AND attachment_type='property_photo'", (order_id,)).fetchone()[0]
+            n_b = cur.execute("SELECT COUNT(*) FROM order_attachments WHERE order_id=? AND attachment_type='property_photo_b'", (order_id,)).fetchone()[0]
+            if n_a == 0 or n_b < n_a:
+                conn.rollback()
+                conn.close()
+                import shutil
+                shutil.rmtree(folder, ignore_errors=True)
+                return err('Please upload both POV A and POV B (second angle) for every area.', success=False)
 
         conn.commit()
 
