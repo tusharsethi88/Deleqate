@@ -12,4 +12,4 @@ playwright>=1.40.0     # HTML to PDF conversion
 PyPDF2>=3.0.0          # PDF slicing for preview (legacy; pypdf preferred)
 pypdf>=4.0             # PDF slicing for preview + concall PDF text extraction
 beautifulsoup4>=4.12   # scrape Screener.in financials/peers for equity research
-duckduckgo-search>=6.0 # optional Moneycontrol/NSE fallback search (degrades gracefully)
+ddgs>=6.0              # optional Moneycontrol/NSE fallback search (degrades gracefully)

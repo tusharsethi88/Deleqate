@@ -659,10 +659,10 @@ def fetch_live_context(stock_name):
         
         try:
             try:
-                from duckduckgo_search import DDGS
+                from ddgs import DDGS              # current package name
             except ImportError:
                 try:
-                    from ddgs import DDGS          # package was renamed to 'ddgs'
+                    from duckduckgo_search import DDGS   # legacy name (deprecated)
                 except ImportError:
                     DDGS = None
             if DDGS is None:
