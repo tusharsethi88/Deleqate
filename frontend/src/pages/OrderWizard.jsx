@@ -18,14 +18,16 @@ export default function OrderWizard({ session }) {
   const frameRef = useRef(null);
   const [h, setH] = useState(900);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [inactiveTasks, setInactiveTasks] = useState([]);
 
   const user = session?.user || {};
   const isTestClient = (user.phone || '') === '9871722766';
 
-  // Admin can toggle the Voice Brief on/off; respect that flag (cache-busted).
+  // Admin can toggle the Voice Brief on/off + disable SKUs; respect both (cache-busted).
   useEffect(() => {
     apiGet(`/order?_=${Date.now()}`).then(r => {
       if (typeof r.voice_brief_enabled === 'boolean') setVoiceEnabled(r.voice_brief_enabled);
+      if (Array.isArray(r.inactive_tasks)) setInactiveTasks(r.inactive_tasks);
     }).catch(() => {});
   }, []);
 
@@ -54,7 +56,7 @@ export default function OrderWizard({ session }) {
 ${voiceEnabled ? '' : '<style>#voiceNoteSection{display:none !important;}</style>'}
 </head><body>
 ${body}
-<script>window.__API_BASE__=${JSON.stringify(API_BASE)};window.__VOICE_BRIEF_ENABLED__=${voiceEnabled ? 'true' : 'false'};</script>
+<script>window.__API_BASE__=${JSON.stringify(API_BASE)};window.__VOICE_BRIEF_ENABLED__=${voiceEnabled ? 'true' : 'false'};window.__INACTIVE_TASKS__=${JSON.stringify(inactiveTasks)};</script>
 <script>${jsRaw}</script>
 <script>
 (function() {
@@ -211,7 +213,7 @@ ${body}
 })();
 </script>
 </body></html>`;
-  }, [user.name, user.phone, isTestClient, voiceEnabled]);
+  }, [user.name, user.phone, isTestClient, voiceEnabled, inactiveTasks]);
 
   useEffect(() => {
     function onMsg(e) {

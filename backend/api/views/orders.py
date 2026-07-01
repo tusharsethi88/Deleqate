@@ -107,6 +107,15 @@ def submit_order(request):
             return err('This service is no longer available. Please choose one of our '
                        'current services.', success=False)
 
+        # Block ordering a SKU the admin has disabled (is_active=0), even via a
+        # deep link — the wizard hides it, this enforces it server-side.
+        _conn = get_db()
+        _sku = _conn.execute('SELECT is_active FROM skus WHERE task_key=?', (task,)).fetchone()
+        _conn.close()
+        if _sku is not None and not _sku['is_active']:
+            return err('This service is currently unavailable. Please choose another service.',
+                       success=False)
+
         client_id_resolved = current_user.id
         name = current_user.name
         email = current_user.email

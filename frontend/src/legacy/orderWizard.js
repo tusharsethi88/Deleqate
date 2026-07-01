@@ -712,6 +712,30 @@
   selectSku = function(sku, el) { _origSelectSku(sku, el); if (sku === 'bg_cleanup') applyBgLock(); if (sku === 'instagram_carousel') { var _f = document.querySelector('input[name=carousel_format]:checked'); if (typeof updateCarouselFormat === 'function') updateCarouselFormat(_f ? _f.value : 'Image + Text'); } };
   applyBgLock();
 
+  // Hide SKUs the admin has disabled (is_active=0). Keeps the order wizard in
+  // sync with the admin panel + homepage.
+  (function hideInactiveSkus() {
+    try {
+      var inactive = window.__INACTIVE_TASKS__ || [];
+      if (!inactive.length) return;
+      inactive.forEach(function (key) {
+        var card = document.querySelector('.sku-pick[data-sku="' + key + '"]');
+        if (card) card.style.display = 'none';
+      });
+      // Hide any cluster heading whose grid now has no visible cards.
+      document.querySelectorAll('.sku-grid').forEach(function (grid) {
+        var anyVisible = Array.prototype.some.call(
+          grid.querySelectorAll('.sku-pick'),
+          function (c) { return c.style.display !== 'none'; });
+        if (!anyVisible) {
+          grid.style.display = 'none';
+          var lbl = grid.previousElementSibling;
+          if (lbl && lbl.classList.contains('cluster-label')) lbl.style.display = 'none';
+        }
+      });
+    } catch (e) {}
+  })();
+
   // Custom searchable dropdown for the equity-research "Stock Name / Topic"
   // field — opens directly below the input and filters instantly. Data from
   // /api/companies (new_companies.csv).
