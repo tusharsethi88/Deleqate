@@ -3,7 +3,7 @@
 // Review tab restores the original Flask QC UX: before/after slider
 // (client reference vs pilot render), per-image pass/fail, and a
 // MANDATORY rejection note that is sent back to the pilot.
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiGet, apiPost, apiPostForm, fileUrl } from '../api.js';
 
@@ -205,6 +205,8 @@ export default function AdminDashboard({ session }) {
   const [loadErr, setLoadErr] = useState(null);
   const [tab, setTab] = useState('orders');
   const [assignSel, setAssignSel] = useState({});
+  const [priceEdit, setPriceEdit] = useState({});
+  const [optEdit, setOptEdit] = useState({});
   const [newPilot, setNewPilot] = useState({ name: '', email: '', phone: '', password: '' });
   const [toast, setToast] = useState(null);
   const [now, setNow] = useState(Date.now());
@@ -275,10 +277,34 @@ export default function AdminDashboard({ session }) {
     const r = await apiPost('/api/admin/sku/toggle', { task_key });
     if (r.success !== false) { flash('SKU toggled.'); load(); } else flash(r.error || 'Error', false);
   }
+  // Inline price save (Price is entered in ₹; backend converts to paise).
+  async function saveSkuPrice(sku, rupees) {
+    const price = String(rupees).trim();
+    if (price === '' || isNaN(Number(price)) || Number(price) < 0) { flash('Enter a valid price.', false); return; }
+    const r = await apiPost('/api/admin/sku/edit', { task_key: sku.task_key, label: sku.label, price, note: sku.note || '' });
+    if (r.success !== false) {
+      flash(`Price updated to ₹${price}.`);
+      setPriceEdit(p => { const n = { ...p }; delete n[sku.task_key]; return n; });
+      load();
+    } else flash(r.error || 'Error', false);
+  }
+
+  // Save one option's price (duration/tier/format). Price entered in ₹.
+  async function saveSkuOption(opt, rupees) {
+    const price = String(rupees).trim();
+    if (price === '' || isNaN(Number(price)) || Number(price) < 0) { flash('Enter a valid price.', false); return; }
+    const r = await apiPost('/api/admin/sku/option/edit', { id: opt.id, price });
+    if (r.success !== false) {
+      flash(`${opt.option_label} price set to ₹${price}.`);
+      setOptEdit(p => { const n = { ...p }; delete n[opt.id]; return n; });
+      load();
+    } else flash(r.error || 'Error', false);
+  }
+
   async function editSku(sku) {
     const label = window.prompt('Label', sku.label || '');
     if (label === null) return;
-    const price = window.prompt('Price (₹, paise as stored)', sku.price ?? '');
+    const price = window.prompt('Price (in ₹)', ((sku.price_paisa ?? 0) / 100));
     if (price === null) return;
     const r = await apiPost('/api/admin/sku/edit', { task_key: sku.task_key, label, price, note: sku.note || '' });
     if (r.success !== false) { flash('SKU updated.'); load(); } else flash(r.error || 'Error', false);
@@ -312,7 +338,7 @@ export default function AdminDashboard({ session }) {
     );
   }
 
-  const { orders = [], pilots = [], stats = {}, skus = [] } = d;
+  const { orders = [], pilots = [], stats = {}, skus = [], customers = [], price_options = {} } = d;
   const labels = d.task_labels || {};
   const reviewOrders = orders.filter(o => isReview(o.status));
   const voiceEnabled = d.settings ? d.settings.voice_brief_enabled : true;
@@ -338,7 +364,7 @@ export default function AdminDashboard({ session }) {
         </div>
 
         <div className="tab-bar">
-          {[['orders', 'Orders', 'list-todo'], ['review', 'Review', 'search'], ['pilots', 'Pilots', 'user-check'], ['skus', 'SKUs', 'sliders'], ['settings', 'Settings', 'settings']].map(([k, lbl, iconName]) => (
+          {[['orders', 'Orders', 'list-todo'], ['review', 'Review', 'search'], ['customers', 'Customers', 'users'], ['pilots', 'Pilots', 'user-check'], ['skus', 'SKUs', 'sliders'], ['settings', 'Settings', 'settings']].map(([k, lbl, iconName]) => (
             <div key={k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <i data-lucide={iconName} style={{ width: 14, height: 14 }}></i>
               <span>{lbl}</span>
@@ -410,6 +436,34 @@ export default function AdminDashboard({ session }) {
           </div>
         )}
 
+        {tab === 'customers' && (
+          <div>
+            <div style={{ margin: '0 0 1rem', color: '#5f6b76', fontSize: '0.9rem' }}>
+              {customers.length} signed-up customer{customers.length !== 1 ? 's' : ''}
+            </div>
+            <table className="atable">
+              <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Signed Up</th><th>Orders</th><th>Spent</th><th>Status</th></tr></thead>
+              <tbody>
+                {customers.map((c, i) => (
+                  <tr key={c.id}>
+                    <td>{i + 1}</td>
+                    <td>{c.name || '—'}</td>
+                    <td>{c.email || '—'}</td>
+                    <td>{c.phone || '—'}</td>
+                    <td>{c.created_at ? String(c.created_at).slice(0, 10) : '—'}</td>
+                    <td>{c.order_count ?? 0}</td>
+                    <td>{rupees(c.total_spent)}</td>
+                    <td><span className={`pill ${c.account_status === 'inactive' ? 'pill-rejected' : 'pill-approved'}`}>{c.account_status || 'active'}</span></td>
+                  </tr>
+                ))}
+                {customers.length === 0 && (
+                  <tr><td colSpan="8" style={{ textAlign: 'center', color: '#8a97a3', padding: '1.5rem' }}>No customers yet</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {tab === 'pilots' && (
           <div>
             <form onSubmit={createPilot} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '0.75rem', marginBottom: '1.5rem', alignItems: 'end' }}>
@@ -437,18 +491,57 @@ export default function AdminDashboard({ session }) {
 
         {tab === 'skus' && (
           <table className="atable">
-            <thead><tr><th>Key</th><th>Label</th><th>Price</th><th>Active</th><th></th></tr></thead>
+            <thead><tr><th>Key</th><th>Label</th><th>Price (₹)</th><th>Active</th><th></th></tr></thead>
             <tbody>
-              {skus.map(s => (
-                <tr key={s.task_key}>
-                  <td>{s.task_key}</td><td>{s.label}</td><td>{s.price}</td>
-                  <td><span className={`pill ${s.is_active ? 'pill-approved' : 'pill-rejected'}`}>{s.is_active ? 'Active' : 'Off'}</span></td>
-                  <td style={{ display: 'flex', gap: 6 }}>
-                    <button className="abtn" onClick={() => toggleSku(s.task_key)}>{s.is_active ? 'Disable' : 'Enable'}</button>
-                    <button className="abtn" onClick={() => editSku(s)}>Edit</button>
-                  </td>
-                </tr>
-              ))}
+              {skus.map(s => {
+                const rupees = ((s.price_paisa ?? 0) / 100);
+                const val = priceEdit[s.task_key] ?? rupees;
+                const dirty = String(val) !== String(rupees);
+                const opts = price_options[s.task_key] || [];
+                return (
+                  <Fragment key={s.task_key}>
+                    <tr>
+                      <td>{s.task_key}</td><td>{s.label}</td>
+                      <td>
+                        <span style={{ color: '#5f6b76' }}>₹</span>
+                        <input className="ainput" type="number" min="0" step="1" value={val}
+                          onChange={e => setPriceEdit(p => ({ ...p, [s.task_key]: e.target.value }))}
+                          style={{ width: '90px', padding: '4px 8px', marginLeft: 4 }} />
+                        {opts.length > 0
+                          ? <span style={{ color: '#8a97a3', fontSize: '0.8rem', marginLeft: 6 }}>base — price set per option below</span>
+                          : (s.price_label && <span style={{ color: '#8a97a3', fontSize: '0.8rem', marginLeft: 6 }}>{s.price_label}</span>)}
+                      </td>
+                      <td><span className={`pill ${s.is_active ? 'pill-approved' : 'pill-rejected'}`}>{s.is_active ? 'Active' : 'Off'}</span></td>
+                      <td style={{ display: 'flex', gap: 6 }}>
+                        <button className="abtn primary" disabled={!dirty} onClick={() => saveSkuPrice(s, val)}>Save</button>
+                        <button className="abtn" onClick={() => toggleSku(s.task_key)}>{s.is_active ? 'Disable' : 'Enable'}</button>
+                        <button className="abtn" onClick={() => editSku(s)}>Edit</button>
+                      </td>
+                    </tr>
+                    {opts.map(o => {
+                      const orupees = ((o.price_paisa ?? 0) / 100);
+                      const oval = optEdit[o.id] ?? orupees;
+                      const odirty = String(oval) !== String(orupees);
+                      return (
+                        <tr key={`opt-${o.id}`} style={{ background: '#f7f9fa' }}>
+                          <td></td>
+                          <td style={{ paddingLeft: 24, color: '#5f6b76' }}>↳ {o.group_label}: <strong>{o.option_label}</strong></td>
+                          <td>
+                            <span style={{ color: '#5f6b76' }}>₹</span>
+                            <input className="ainput" type="number" min="0" step="1" value={oval}
+                              onChange={e => setOptEdit(p => ({ ...p, [o.id]: e.target.value }))}
+                              style={{ width: '90px', padding: '4px 8px', marginLeft: 4 }} />
+                          </td>
+                          <td></td>
+                          <td>
+                            <button className="abtn primary" disabled={!odirty} onClick={() => saveSkuOption(o, oval)}>Save</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         )}

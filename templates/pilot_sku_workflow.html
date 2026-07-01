@@ -2298,21 +2298,46 @@ CTA: {{ intake.cta_text }}{% endif %}</textarea>
       function flash(btn, msg){ var t=btn.textContent; btn.textContent=msg; btn.classList.add('copied'); setTimeout(function(){btn.textContent=t; btn.classList.remove('copied');}, 1800); }
       function esc(x){ return (x==null?'':String(x)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+      // Capture the ORIGINAL architect template once (with the placeholder intact)
+      // so we can rebuild it cleanly every time the Brand DNA changes — no
+      // double-injection, no stale state.
+      var IC_ARCH_MARKER = '[[BRAND_DNA — click Copy and this fills automatically from Stage 1]]';
+      var _icArchEl = document.getElementById('p-ic-architect');
+      var IC_ARCH_TPL = _icArchEl ? _icArchEl.value : '';
+
+      // Auto-inject the saved/typed Brand DNA into the Stage 2 architect prompt.
+      window.icInjectDna = function(){
+        var box = document.getElementById('p-ic-architect');
+        var dnaEl = document.getElementById('ic-brand-dna');
+        if(!box || !dnaEl) return;
+        var dna = (dnaEl.value||'').trim();
+        box.value = dna ? IC_ARCH_TPL.replace(IC_ARCH_MARKER, dna) : IC_ARCH_TPL;
+      };
+
       window.icSaveBrandDna = function(btn){
         var v = (document.getElementById('ic-brand-dna').value||'').trim();
         if(!v){ alert('Paste the Brand DNA JSON from Gemini first.'); return; }
         postJSON('/api/pilot/save-brand-dna', {order_id: ORDER_ID, brand_dna: v});
-        flash(btn, 'Saved ✓');
+        icInjectDna();                       // build the Stage 2 prompt now
+        flash(btn, 'Saved ✓ — Stage 2 prompt ready');
       };
 
       window.icCopyArchitect = function(btn){
         var dna = (document.getElementById('ic-brand-dna').value||'').trim();
         if(!dna){ alert('Complete Stage 1 first: paste & save the Brand DNA.'); return; }
-        var tpl = document.getElementById('p-ic-architect').value;
-        var out = tpl.replace('[[BRAND_DNA — click Copy and this fills automatically from Stage 1]]', dna);
-        navigator.clipboard.writeText(out).then(function(){ flash(btn, 'Copied!'); })
-          .catch(function(){ var ta=document.getElementById('p-ic-architect'); ta.value=out; ta.select(); document.execCommand('copy'); flash(btn,'Copied!'); });
+        icInjectDna();                       // ensure it's up to date, then copy the box as-is
+        var ta = document.getElementById('p-ic-architect');
+        navigator.clipboard.writeText(ta.value).then(function(){ flash(btn, 'Copied!'); })
+          .catch(function(){ ta.select(); document.execCommand('copy'); flash(btn,'Copied!'); });
       };
+
+      // Inject live as the pilot pastes DNA, and once on load (covers returning
+      // pilots whose brand_dna is pre-filled from the DB).
+      if(_icArchEl){
+        var _dnaBox = document.getElementById('ic-brand-dna');
+        if(_dnaBox){ _dnaBox.addEventListener('input', icInjectDna); }
+        icInjectDna();
+      }
 
       function parsePlan(raw){
         if(!raw) return null;

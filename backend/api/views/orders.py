@@ -11,7 +11,7 @@ from django.conf import settings
 from django.views.decorators.http import require_POST
 from werkzeug.utils import secure_filename
 
-from core.database import get_db, log_status, get_setting
+from core.database import get_db, log_status, get_setting, get_option_price
 from core.auth import load_user, login_required, dashboard_for, get_csrf_token
 from core.business import (
     is_allowed_upload, _file_ext, _clean_label, _unique_named_path, maybe_convert_heic,
@@ -121,12 +121,14 @@ def submit_order(request):
             if vs_tier not in ('starter', 'full'):
                 vs_tier = 'full'
             room_count = len(rooms) or 1
+            # Tier price is admin-controlled via sku_price_options (fallback to constants).
             if vs_tier == 'starter':
-                price_unit = PRICE_VIRTUAL_STAGING_STARTER
+                price_unit = get_option_price('virtual_staging', 'vs_tier', 'starter') or PRICE_VIRTUAL_STAGING_STARTER
                 extra_rooms = 0
             else:
                 extra_rooms = max(0, room_count - 4)
-                price_unit = PRICE_VIRTUAL_STAGING + extra_rooms * PRICE_VIRTUAL_STAGING_EXTRA_ROOM
+                base = get_option_price('virtual_staging', 'vs_tier', 'full') or PRICE_VIRTUAL_STAGING
+                price_unit = base + extra_rooms * PRICE_VIRTUAL_STAGING_EXTRA_ROOM
             intake_data = {
                 'property_type':  F.get('property_type', 'Residential'),
                 'property_stage': F.get('property_stage', 'Finished'),
@@ -164,7 +166,8 @@ def submit_order(request):
                 'standard': PRICE_PROPERTY_REEL_STANDARD,
                 'showcase': PRICE_PROPERTY_REEL_SHOWCASE,
             }
-            price_unit = _tier_prices.get(reel_tier, PRICE_PROPERTY_REEL_HOOK)
+            price_unit = (get_option_price('property_reel', 'reel_tier', reel_tier)
+                          or _tier_prices.get(reel_tier, PRICE_PROPERTY_REEL_HOOK))
         elif task == 'property_social_card':
             intake_data = {
                 'property_name':  F.get('property_name', '').strip(),
@@ -291,8 +294,10 @@ def submit_order(request):
                 'carousel_format': F.get('carousel_format', 'Image + Text').strip(),
                 'infographic_data': F.get('infographic_data', '').strip(),
             }
-            # Infographic is the most design-heavy format → higher flat rate (₹899)
-            price_unit = 89900 if F.get('carousel_format', '').strip() == 'Infographic' else PRICE_INSTAGRAM_CAROUSEL
+            # Format-driven price (admin-controlled); fallback keeps old behavior.
+            _fmt = F.get('carousel_format', '').strip()
+            price_unit = (get_option_price('instagram_carousel', 'carousel_format', _fmt)
+                          or (89900 if _fmt == 'Infographic' else PRICE_INSTAGRAM_CAROUSEL))
         elif task == 'brand_demo_video':
             intake_data = {
                 'brand_name':      F.get('brand_name', '').strip(),
@@ -305,7 +310,9 @@ def submit_order(request):
                 'music':           F.get('music', 'soft'),
                 'reference_video': F.get('reference_video', '').strip(),
             }
-            price_unit = PRICE_BRAND_DEMO_VIDEO
+            # Duration-driven price (admin-controlled); fallback to flat rate.
+            price_unit = (get_option_price('brand_demo_video', 'duration', F.get('duration', '30s'))
+                          or PRICE_BRAND_DEMO_VIDEO)
         elif task == 'announcement_pack':
             intake_data = {
                 'brand_name':        F.get('brand_name', '').strip(),

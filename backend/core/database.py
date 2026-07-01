@@ -10,7 +10,9 @@ from .business import (
     ADMIN_EMAIL, ADMIN_PASSWORD, IS_PRODUCTION, FRONTEND_URL,
     TEST_CLIENT_PHONE, TEST_CLIENT_PIN, TEST_PILOT_EMAIL, TEST_PILOT_PASS,
     TASK_LABELS,
-    PRICE_VIRTUAL_STAGING, PRICE_PROPERTY_REEL_HOOK, PRICE_PROPERTY_SOCIAL_CARD,
+    PRICE_VIRTUAL_STAGING, PRICE_VIRTUAL_STAGING_STARTER,
+    PRICE_PROPERTY_REEL_HOOK, PRICE_PROPERTY_REEL_STANDARD, PRICE_PROPERTY_REEL_SHOWCASE,
+    PRICE_PROPERTY_SOCIAL_CARD,
     PRICE_BG_CLEANUP, PRICE_PRODUCT_LISTING, PRICE_PRODUCT_MOCKUP,
     PRICE_INSTAGRAM_CAROUSEL, PRICE_BRAND_DEMO_VIDEO, PRICE_ANNOUNCEMENT_PACK,
     PRICE_BRAND_STARTER_KIT, PRICE_MENU_DESIGN, PRICE_PODCAST_REEL, PRICE_EQUITY_RESEARCH,
@@ -462,6 +464,45 @@ def init_db():
             _seed
         )
 
+    # ── sku_price_options: option-based pricing (duration/tier/format) ──
+    # Each row is one selectable option for a SKU whose choice drives the price.
+    # submit_order looks up the price by (task_key, field_name, option_value);
+    # admin edits these prices from the SKUs tab.
+    conn.execute('''CREATE TABLE IF NOT EXISTS sku_price_options (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_key     TEXT NOT NULL,
+        field_name   TEXT NOT NULL,      -- the intake form field, e.g. 'duration'
+        group_label  TEXT NOT NULL,      -- display heading, e.g. 'Video Duration'
+        option_value TEXT NOT NULL,      -- submitted value, e.g. '15s'
+        option_label TEXT NOT NULL,      -- display label, e.g. '15 sec'
+        price_paisa  INTEGER NOT NULL,
+        sort_order   INTEGER DEFAULT 0,
+        UNIQUE(task_key, field_name, option_value)
+    )''')
+    if not conn.execute('SELECT 1 FROM sku_price_options LIMIT 1').fetchone():
+        _opt_seed = [
+            # brand_demo_video — priced by video duration (was flat ₹1249)
+            ('brand_demo_video', 'duration', 'Video Duration', '15s', '15 sec',  99900, 1),
+            ('brand_demo_video', 'duration', 'Video Duration', '30s', '30 sec', 124900, 2),
+            ('brand_demo_video', 'duration', 'Video Duration', '60s', '60 sec', 174900, 3),
+            # property_reel — existing tiers
+            ('property_reel', 'reel_tier', 'Reel Tier', 'hook',     'Hook',      PRICE_PROPERTY_REEL_HOOK,     1),
+            ('property_reel', 'reel_tier', 'Reel Tier', 'standard', 'Standard',  PRICE_PROPERTY_REEL_STANDARD, 2),
+            ('property_reel', 'reel_tier', 'Reel Tier', 'showcase', 'Showcase',  PRICE_PROPERTY_REEL_SHOWCASE, 3),
+            # virtual_staging — tier (extra rooms still added on top for Full)
+            ('virtual_staging', 'vs_tier', 'Staging Tier', 'starter', 'Starter (2 rooms)', PRICE_VIRTUAL_STAGING_STARTER, 1),
+            ('virtual_staging', 'vs_tier', 'Staging Tier', 'full',    'Full (up to 4 rooms)', PRICE_VIRTUAL_STAGING,      2),
+            # instagram_carousel — format
+            ('instagram_carousel', 'carousel_format', 'Format', 'Text-led',     'Text-led',     PRICE_INSTAGRAM_CAROUSEL, 1),
+            ('instagram_carousel', 'carousel_format', 'Format', 'Image + Text', 'Image + Text', PRICE_INSTAGRAM_CAROUSEL, 2),
+            ('instagram_carousel', 'carousel_format', 'Format', 'Photo-only',   'Photo-only',   PRICE_INSTAGRAM_CAROUSEL, 3),
+            ('instagram_carousel', 'carousel_format', 'Format', 'Infographic',  'Infographic',  89900,                    4),
+        ]
+        conn.executemany(
+            'INSERT INTO sku_price_options (task_key, field_name, group_label, option_value, option_label, price_paisa, sort_order) VALUES (?,?,?,?,?,?,?)',
+            _opt_seed
+        )
+
     # ── app_settings: generic admin-toggleable key/value flags ──
     conn.execute('''CREATE TABLE IF NOT EXISTS app_settings (
         key   TEXT PRIMARY KEY,
@@ -491,6 +532,24 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+def get_option_price(task_key, field_name, option_value, conn=None):
+    """Return the price_paisa for a selected SKU option, or None if not found.
+    Used by submit_order to price choice-driven SKUs (duration/tier/format)."""
+    own = conn is None
+    if own:
+        conn = get_db()
+    try:
+        row = conn.execute(
+            'SELECT price_paisa FROM sku_price_options WHERE task_key=? AND field_name=? AND option_value=?',
+            (task_key, field_name, (option_value or '').strip())).fetchone()
+        return row['price_paisa'] if row else None
+    except Exception:
+        return None
+    finally:
+        if own:
+            conn.close()
+
 
 def sync_pricing_from_db():
     """Load admin-edited SKU prices/labels from DB into in-memory maps (called at startup + after edits)."""

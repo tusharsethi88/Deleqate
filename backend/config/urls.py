@@ -185,6 +185,7 @@ urlpatterns = [
     path('api/admin/confirm-payment', admin.api_admin_confirm_payment),
     path('api/admin/sku/toggle', admin.api_admin_sku_toggle),
     path('api/admin/sku/edit', admin.api_admin_sku_edit),
+    path('api/admin/sku/option/edit', admin.api_admin_sku_option_edit),
     path('api/admin/setting/toggle', admin.api_admin_setting_toggle),
 
     # ── pilot ──

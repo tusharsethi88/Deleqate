@@ -26,12 +26,12 @@ const heroCss = `
 
 
 const CLUSTERS = [
-  ['Real Estate', [
+  ['Architecture, Interior Design & Real Estate', [
     { key: 'virtual_staging', sla: '4h', icon: 'sofa', title: 'Virtual Staging', desc: 'Furnish empty rooms with photorealistic AI furniture. 4 rooms per order, multiple style options.', price: '₹799', note: '4-room staging pack', features: ['4 rooms per order included', 'Multiple interior styles', 'High-fidelity lighting blend', 'Self-QC comparison check'] },
     { key: 'property_reel', sla: '4h', icon: 'clapperboard', title: 'Property Marketing Reel', desc: 'Cinematic vertical video reel from your property photos. Hook, Standard, or Showcase tier.', price: 'from ₹999', note: 'per marketing reel', features: ['9:16 vertical layout', 'AI narrative voiceover', 'Cinematic drift effects', 'Viral-ready social hooks'] },
     { key: 'property_social_card', sla: '2h', icon: 'layers', title: 'Property Social Card Pack', desc: 'WhatsApp card + Instagram post + Story — brand-consistent and share-ready.', price: '₹499', note: '3-piece layout pack', features: ['WhatsApp broadcast card', 'Instagram feed/story post', 'Brand-aligned typography', 'Ready to share instantly'] },
   ]],
-  ['E-commerce', [
+  ['Retail and E-Commerce', [
     { key: 'bg_cleanup', sla: '1h', icon: 'scissors', title: 'Background Cleanup', desc: 'Professional product photo clipping and background removal. Flat rate up to 10 images.', price: '₹500', priceSmall: ' flat', note: 'for up to 10 images', features: ['Pure white backgrounds', 'Drop shadow addition', 'Professional clipping paths', 'High-resolution exports'] },
     { key: 'product_listing', sla: '2h', icon: 'tag', title: 'Product Listing Creation', desc: 'Keyword-rich product descriptions optimised for Amazon, Flipkart, and Shopify.', price: '₹199', note: 'per product description', features: ['SEO-optimised titles', 'Persuasive bullet points', 'Search backend keywords', 'Competitor tag analysis'] },
     { key: 'product_mockup', sla: '2h', icon: 'package', title: 'Product Lifestyle Mockup', desc: 'Place your product into photorealistic lifestyle scenes — 12 category-specific styles.', price: '₹299', priceSmall: '/img', note: 'per lifestyle mockup', features: ['Photorealistic placement', '12 custom design scenes', 'Natural shadow & lighting', 'Commercial usage license'] },
@@ -439,6 +439,24 @@ export default function Home({ session }) {
                       <div style={{ width: '100%', height: '150px', borderRadius: '6px', overflow: 'hidden', marginBottom: '1rem', background: '#1E2A39', border: '1px solid rgba(255,255,255,0.12)' }}>
                         <img src="/img/task_holders/announcement_pack/poster.png" alt="Announcement pack sample"
                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      </div>
+                    )}
+                    {s.key === 'brand_demo_video' && (
+                      <div style={{ width: '100%', height: '150px', borderRadius: '6px', overflow: 'hidden', marginBottom: '1rem', background: '#1E2A39', border: '1px solid rgba(255,255,255,0.12)' }}>
+                        <video
+                          src="/img/task_holders/brand_demo_video/demo.mp4"
+                          autoPlay muted loop playsInline preload="metadata"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }}
+                        />
+                      </div>
+                    )}
+                    {s.key === 'property_reel' && (
+                      <div style={{ width: '100%', height: '150px', borderRadius: '6px', overflow: 'hidden', marginBottom: '1rem', background: '#1E2A39', border: '1px solid rgba(255,255,255,0.12)' }}>
+                        <video
+                          src="/img/task_holders/property_reel/demo.mp4"
+                          autoPlay muted loop playsInline preload="metadata"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }}
+                        />
                       </div>
                     )}
 

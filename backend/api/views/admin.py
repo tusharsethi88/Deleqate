@@ -66,9 +66,31 @@ def admin_home(request):
         'revenue':     conn.execute("SELECT COALESCE(SUM(total_price),0) FROM orders WHERE status='approved'").fetchone()[0],
     }
     skus = [dict(r) for r in conn.execute('SELECT * FROM skus ORDER BY sort_order').fetchall()]
+
+    # Customers (signed-up clients) with signup date, order count and spend.
+    customers = []
+    for u in conn.execute(
+            "SELECT id, name, email, phone, created_at, account_status "
+            "FROM users WHERE role='client' ORDER BY datetime(created_at) DESC").fetchall():
+        cu = dict(u)
+        cu['order_count'] = conn.execute(
+            "SELECT COUNT(*) FROM orders WHERE client_id=?", (u['id'],)).fetchone()[0]
+        cu['total_spent'] = conn.execute(
+            "SELECT COALESCE(SUM(total_price),0) FROM orders WHERE client_id=? AND status='approved'",
+            (u['id'],)).fetchone()[0]
+        customers.append(cu)
+
+    # Option-based pricing rows (duration/tier/format), grouped by SKU.
+    price_options = {}
+    for r in conn.execute(
+            'SELECT id, task_key, field_name, group_label, option_value, option_label, '
+            'price_paisa, sort_order FROM sku_price_options ORDER BY task_key, sort_order').fetchall():
+        price_options.setdefault(r['task_key'], []).append(dict(r))
+
     conn.close()
     return ok({'orders': order_list, 'pilots': pilot_list, 'stats': stats,
-               'task_labels': TASK_LABELS, 'skus': skus,
+               'task_labels': TASK_LABELS, 'skus': skus, 'customers': customers,
+               'price_options': price_options,
                'settings': {'voice_brief_enabled': get_setting('voice_brief_enabled', '1') == '1'}})
 
 
@@ -446,6 +468,32 @@ def api_admin_sku_edit(request):
     PRICING_MAP[task_key] = (new_price, row['price_type'], row['price_label'])
     TASK_LABELS[task_key] = new_label
     return ok({'success': True, 'price_paisa': new_price, 'label': new_label})
+
+
+# ── /api/admin/sku/option/edit — set price of one option (duration/tier/format) ──
+@require_POST
+@role_required('admin')
+def api_admin_sku_option_edit(request):
+    data = body(request)
+    try:
+        opt_id = int(data.get('id'))
+    except (TypeError, ValueError):
+        return err('id required')
+    price_str = str(data.get('price', '')).strip()
+    try:
+        new_price = int(round(float(price_str) * 100))
+    except ValueError:
+        return err('Invalid price')
+    if new_price < 0:
+        return err('Invalid price')
+    conn = get_db()
+    row = conn.execute('SELECT id FROM sku_price_options WHERE id=?', (opt_id,)).fetchone()
+    if not row:
+        conn.close()
+        return err('Option not found', status=404)
+    conn.execute('UPDATE sku_price_options SET price_paisa=? WHERE id=?', (new_price, opt_id))
+    conn.commit(); conn.close()
+    return ok({'success': True, 'id': opt_id, 'price_paisa': new_price})
 
 
 # ── /api/autopilot/status (admin-only, app.py 4458-4480) ───
